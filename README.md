@@ -1,7 +1,7 @@
 # alignment-tools
-A new class built on Biopython's MultipleSeqAlignment but with richer functionality, allowing for easy manipulation of alignments, phylogenetic trees and protein structures.
+Contains a new subclass of Biopython's MultipleSeqAlignment with richer functionality, allowing for easy manipulation of alignments, phylogenetic trees and protein structures.
 
-The core of this code is a set of two new classes: a MultipleSequenceAlignment (contrast to Biopython's MultipleSeqAlignment) class and a ProteinStructure class.
+The core of this code is a set of three new classes: a MultipleSequenceAlignment class, a SequenceArray class (for unaligned sequences) and a ProteinStructure class.
 I am working on a set of Jupyter notebooks that should explain the basic usage of these objects.
 
 ## Basics
