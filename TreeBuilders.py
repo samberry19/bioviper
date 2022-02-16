@@ -19,7 +19,7 @@ def CalcIdentityMatrix(msa):
         # Take the mean identity of the sequence with every other sequence
         IM.append(np.mean(seq==msa.matrix, axis=1))
 
-    return IM
+    return np.array(IM)
 
 def autodetect_blosum_matrix(msa):
 

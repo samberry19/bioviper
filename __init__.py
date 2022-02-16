@@ -1,5 +1,6 @@
 
 import numpy as np
+import pandas as pd
 from Bio import AlignIO, Phylo, PDB, pairwise2
 
 from Bio.Align import _aligners
@@ -13,7 +14,7 @@ from TreeBuilders import *
 
 from copy import copy,deepcopy
 
-alphabet = '-ACDEFHIKLMNPQRSTVWXY'
+alphabet = '-ACDEFGHIKLMNPQRSTVWY'
 
 def readAlignment(alignment_file, format="fasta", calc_frequencies=True):
 
@@ -26,7 +27,7 @@ def readAlignment(alignment_file, format="fasta", calc_frequencies=True):
     return msa
 
 
-class MultipleSequenceAlignment:
+class MultipleSequenceAlignment(MultipleSeqAlignment):
 
     """Represents a classical multiple sequence alignment (MSA).
 
@@ -57,12 +58,13 @@ class MultipleSequenceAlignment:
         if alphabet is not None:
             raise ValueError("The alphabet argument is no longer supported")
 
-        self._records = []
-
         # IF you generate from a matrix rather than a list of SeqRecords
         if isinstance(records, np.ndarray):
+            self._records = []
             self.matrix = records
+
             record_list = []
+
             for k,rec in enumerate(records):
 
                 record_info = []
@@ -85,11 +87,13 @@ class MultipleSequenceAlignment:
 
                 record_list.append(seq)
 
-            self.extend(record_list)
+            super().__init__(record_list)
 
         else:
-            #if records:
-            self.extend(records)
+            '''If you pass it a list of record objects, it will initialize it as a
+            normal MultipleSeqAlignment object.'''
+
+            super().__init__(records)
 
         # Annotations about the whole alignment
         if annotations is None:
@@ -109,6 +113,10 @@ class MultipleSequenceAlignment:
         self.coverage = None
         self.frequencies = None
         self.tree = None
+        self.numeric_matrix = None
+        self.fij = None
+        self._pseudocount = 0
+        self.sequence_weights = np.ones(self.N)
 
     def save(self, filename, format='Auto'):
 
@@ -159,13 +167,65 @@ class MultipleSequenceAlignment:
         else:
             return self.coverage
 
-    def calc_frequencies(self):
-        if type(self.frequencies)==type(None):
+    def calc_frequencies(self, pseudocount=0):
+
+        if type(self.frequencies)==type(None) or pseudocount != self._pseudocount:
+            self._pseudocount = pseudocount
+
             M_upper = self.upper().replace('.','-')
-            self.frequencies = np.array([[np.sum(M_upper.matrix[:,k]==i) for i in alphabet] for k in range(M_upper.matrix.shape[1])]) / self.N
-            return self.frequencies
+            if pseudocount==0:
+                self.frequencies = np.array([[np.sum(M_upper.matrix[:,k]==i) for i in alphabet] for k in range(M_upper.matrix.shape[1])]) / self.N
+            else:
+                self.frequencies = np.array([[np.sum(M_upper.matrix[:,k]==i) + pseudocount for i in alphabet] for k in range(M_upper.matrix.shape[1])])
+                self.frequencies = self.frequencies / np.sum(self.frequencies, axis=1)[:,None]
+
+        return self.frequencies
+
+    def as_numeric(self, recalculate=False):
+
+        if type(self.numeric_matrix) == type(None) or recalculate:
+            m = copy(self.upper().replace('.','-').matrix)
+            mnum = np.zeros(m.shape)
+            for n,letter in enumerate(alphabet):
+                mnum[m==letter]=n
+            self.numeric_matrix = mnum.astype('int')
+
+        return self.numeric_matrix
+
+    def as_df(self, numeric=False):
+
+        '''Return alignment as a pandas dataframe.'''
+
+        if numeric:
+            df = pd.DataFrame.from_records(self.as_numeric(), index=self.ids)
         else:
-            return self.frequencies
+            df = pd.DataFrame.from_records(self.matrix, index=self.ids)
+
+        return df
+
+    def one_hot_encoding(self):
+
+        '''Generate a one-hot encoded pandas dataframe, e.g. for dimensionality reduction.'''
+
+        return pd.get_dummies(self.upper().as_df())
+
+    def calc_pair_frequencies(self, pseudocount=0):
+
+        if type(self.numeric_matrix) == type(None):
+            self.as_numeric()
+
+        X = [[[] for i in range(self.L)] for i in range(self.L)]
+
+        for i in range(self.L):
+            for j in range(i, self.L):
+                A = np.histogram2d(self.numeric_matrix[:,i], self.numeric_matrix[:,j], bins=[np.arange(22), np.arange(22)])[0] + pseudocount
+                A = A/np.sum(A)
+                X[i][j] = A
+                X[j][i] = A
+
+        self.fij = np.array(X)
+
+        return self.fij
 
     def _set_per_column_annotations(self, value):
         if not isinstance(value, dict):
@@ -204,105 +264,105 @@ class MultipleSequenceAlignment:
         doc="""Dictionary of per-letter-annotation for the sequence.""",
     )
 
-    def _str_line(self, record, length=50):
-        """Return a truncated string representation of a SeqRecord (PRIVATE).
-
-        This is a PRIVATE function used by the __str__ method.
-        """
-        if record.seq.__class__.__name__ == "CodonSeq":
-            if len(record.seq) <= length:
-                return "%s %s" % (record.seq, record.id)
-            else:
-                return "%s...%s %s" % (
-                    record.seq[: length - 3],
-                    record.seq[-3:],
-                    record.id,
-                )
-        else:
-            if len(record.seq) <= length:
-                return "%s %s" % (record.seq, record.id)
-            else:
-                return "%s...%s %s" % (
-                    record.seq[: length - 6],
-                    record.seq[-3:],
-                    record.id,
-                )
-
-    def __str__(self):
-        """Return a multi-line string summary of the alignment.
-
-        See also the alignment's format method.
-        """
-        rows = len(self._records)
-        lines = [
-            "Alignment with %i rows and %i columns"
-            % (rows, self.get_alignment_length())
-        ]
-        if rows <= 20:
-            lines.extend(self._str_line(rec) for rec in self._records)
-        else:
-            lines.extend(self._str_line(rec) for rec in self._records[:18])
-            lines.append("...")
-            lines.append(self._str_line(self._records[-1]))
-        return "\n".join(lines)
-
-    def __repr__(self):
-        """Return a representation of the object for debugging.
-        """
-        # A doctest for __repr__ would be nice, but __class__ comes out differently
-        # if run via the __main__ trick.
-        return "<%s instance (%i records of length %i) at %x>" % (
-            self.__class__,
-            len(self._records),
-            self.get_alignment_length(),
-            id(self),
-        )
-        # This version is useful for doing eval(repr(alignment)),
-        # but it can be VERY long:
-        # return "%s(%r)" \
-        #       % (self.__class__, self._records)
-
-    def __format__(self, format_spec):
-        """Return the alignment as a string in the specified file format.
-        """
-        if format_spec:
-            from io import StringIO
-            from Bio import AlignIO
-
-            handle = StringIO()
-            AlignIO.write([self], handle, format_spec)
-            return handle.getvalue()
-        else:
-            # Follow python convention and default to using __str__
-            return str(self)
-
-    def __iter__(self):
-        """Iterate over alignment rows as SeqRecord objects.
-        """
-        return iter(self._records)
-
-    def __len__(self):
-        """Return the number of sequences in the alignment.
-
-        Use len(alignment) to get the number of sequences (i.e. the number of
-        rows), and alignment.get_alignment_length() to get the length of the
-        longest sequence (i.e. the number of columns).
-
-        This is easy to remember if you think of the alignment as being like a
-        list of SeqRecord objects.
-        """
-        return len(self._records)
-
-    def get_alignment_length(self):
-        """Return the maximum length of the alignment.
-        """
-        max_length = 0
-
-        for record in self._records:
-            if len(record.seq) > max_length:
-                max_length = len(record.seq)
-
-        return max_length
+    # def _str_line(self, record, length=50):
+    #     """Return a truncated string representation of a SeqRecord (PRIVATE).
+    #
+    #     This is a PRIVATE function used by the __str__ method.
+    #     """
+    #     if record.seq.__class__.__name__ == "CodonSeq":
+    #         if len(record.seq) <= length:
+    #             return "%s %s" % (record.seq, record.id)
+    #         else:
+    #             return "%s...%s %s" % (
+    #                 record.seq[: length - 3],
+    #                 record.seq[-3:],
+    #                 record.id,
+    #             )
+    #     else:
+    #         if len(record.seq) <= length:
+    #             return "%s %s" % (record.seq, record.id)
+    #         else:
+    #             return "%s...%s %s" % (
+    #                 record.seq[: length - 6],
+    #                 record.seq[-3:],
+    #                 record.id,
+    #             )
+    #
+    # def __str__(self):
+    #     """Return a multi-line string summary of the alignment.
+    #
+    #     See also the alignment's format method.
+    #     """
+    #     rows = len(self._records)
+    #     lines = [
+    #         "Alignment with %i rows and %i columns"
+    #         % (rows, self.get_alignment_length())
+    #     ]
+    #     if rows <= 20:
+    #         lines.extend(self._str_line(rec) for rec in self._records)
+    #     else:
+    #         lines.extend(self._str_line(rec) for rec in self._records[:18])
+    #         lines.append("...")
+    #         lines.append(self._str_line(self._records[-1]))
+    #     return "\n".join(lines)
+    #
+    # def __repr__(self):
+    #     """Return a representation of the object for debugging.
+    #     """
+    #     # A doctest for __repr__ would be nice, but __class__ comes out differently
+    #     # if run via the __main__ trick.
+    #     return "<%s instance (%i records of length %i) at %x>" % (
+    #         self.__class__,
+    #         len(self._records),
+    #         self.get_alignment_length(),
+    #         id(self),
+    #     )
+    #     # This version is useful for doing eval(repr(alignment)),
+    #     # but it can be VERY long:
+    #     # return "%s(%r)" \
+    #     #       % (self.__class__, self._records)
+    #
+    # def __format__(self, format_spec):
+    #     """Return the alignment as a string in the specified file format.
+    #     """
+    #     if format_spec:
+    #         from io import StringIO
+    #         from Bio import AlignIO
+    #
+    #         handle = StringIO()
+    #         AlignIO.write([self], handle, format_spec)
+    #         return handle.getvalue()
+    #     else:
+    #         # Follow python convention and default to using __str__
+    #         return str(self)
+    #
+    # def __iter__(self):
+    #     """Iterate over alignment rows as SeqRecord objects.
+    #     """
+    #     return iter(self._records)
+    #
+    # def __len__(self):
+    #     """Return the number of sequences in the alignment.
+    #
+    #     Use len(alignment) to get the number of sequences (i.e. the number of
+    #     rows), and alignment.get_alignment_length() to get the length of the
+    #     longest sequence (i.e. the number of columns).
+    #
+    #     This is easy to remember if you think of the alignment as being like a
+    #     list of SeqRecord objects.
+    #     """
+    #     return len(self._records)
+    #
+    # def get_alignment_length(self):
+    #     """Return the maximum length of the alignment.
+    #     """
+    #     max_length = 0
+    #
+    #     for record in self._records:
+    #         if len(record.seq) > max_length:
+    #             max_length = len(record.seq)
+    #
+    #     return max_length
 
     def extend(self, records):
         """Add more SeqRecord objects to the alignment as rows.
@@ -344,58 +404,58 @@ class MultipleSequenceAlignment:
         self.names = np.array([rec.name for rec in self._records])
         self.descriptions = np.array([rec.description for rec in self._records])
 
-    def append(self, record):
-        """Add one more SeqRecord object to the alignment as a new row."""
-
-        if self._records:
-            self._append(record, self.get_alignment_length())
-        else:
-            self._append(record)
-
-    def _append(self, record, expected_length=None):
-        """Validate and append a record (PRIVATE)."""
-        if not isinstance(record, SeqRecord):
-            raise TypeError("New sequence is not a SeqRecord object")
-
-        # Currently the get_alignment_length() call is expensive, so we need
-        # to avoid calling it repeatedly for __init__ and extend, hence this
-        # private _append method
-        if expected_length is not None and len(record) != expected_length:
-            # TODO - Use the following more helpful error, but update unit tests
-            # raise ValueError("New sequence is not of length %i"
-            #                  % self.get_alignment_length())
-            raise ValueError("Sequences must all be the same length")
-
-        self._records.append(record)
-
-    def __add__(self, other):
-        """Combine two alignments with the same number of rows by adding them.
-
-        If you have two multiple sequence alignments (MSAs), there are two ways to think
-        about adding them - by row or by column. Using the extend method adds by row.
-        Using the addition operator adds by column.
-
-        """
-        if not isinstance(other, MultipleSequenceAlignment):
-            raise NotImplementedError
-        if len(self) != len(other):
-            raise ValueError(
-                "When adding two alignments they must have the same length"
-                " (i.e. same number of rows)"
-            )
-        merged = (left + right for left, right in zip(self, other))
-        # Take any common annotation:
-        annotations = {}
-        for k, v in self.annotations.items():
-            if k in other.annotations and other.annotations[k] == v:
-                annotations[k] = v
-        column_annotations = {}
-        for k, v in self.column_annotations.items():
-            if k in other.column_annotations:
-                column_annotations[k] = v + other.column_annotations[k]
-        return MultipleSequenceAlignment(
-            merged, annotations=annotations, column_annotations=column_annotations
-        )
+    # def append(self, record):
+    #     """Add one more SeqRecord object to the alignment as a new row."""
+    #
+    #     if self._records:
+    #         self._append(record, self.get_alignment_length())
+    #     else:
+    #         self._append(record)
+    #
+    # def _append(self, record, expected_length=None):
+    #     """Validate and append a record (PRIVATE)."""
+    #     if not isinstance(record, SeqRecord):
+    #         raise TypeError("New sequence is not a SeqRecord object")
+    #
+    #     # Currently the get_alignment_length() call is expensive, so we need
+    #     # to avoid calling it repeatedly for __init__ and extend, hence this
+    #     # private _append method
+    #     if expected_length is not None and len(record) != expected_length:
+    #         # TODO - Use the following more helpful error, but update unit tests
+    #         # raise ValueError("New sequence is not of length %i"
+    #         #                  % self.get_alignment_length())
+    #         raise ValueError("Sequences must all be the same length")
+    #
+    #     self._records.append(record)
+    #
+    # def __add__(self, other):
+    #     """Combine two alignments with the same number of rows by adding them.
+    #
+    #     If you have two multiple sequence alignments (MSAs), there are two ways to think
+    #     about adding them - by row or by column. Using the extend method adds by row.
+    #     Using the addition operator adds by column.
+    #
+    #     """
+    #     if not isinstance(other, MultipleSequenceAlignment):
+    #         raise NotImplementedError
+    #     if len(self) != len(other):
+    #         raise ValueError(
+    #             "When adding two alignments they must have the same length"
+    #             " (i.e. same number of rows)"
+    #         )
+    #     merged = (left + right for left, right in zip(self, other))
+    #     # Take any common annotation:
+    #     annotations = {}
+    #     for k, v in self.annotations.items():
+    #         if k in other.annotations and other.annotations[k] == v:
+    #             annotations[k] = v
+    #     column_annotations = {}
+    #     for k, v in self.column_annotations.items():
+    #         if k in other.column_annotations:
+    #             column_annotations[k] = v + other.column_annotations[k]
+    #     return MultipleSequenceAlignment(
+    #         merged, annotations=annotations, column_annotations=column_annotations
+    #     )
 
     def upper(self):
 
@@ -424,7 +484,7 @@ class MultipleSequenceAlignment:
 
         elif isinstance(index, np.ndarray):
             ids = self.ids[index]; names = self.names[index]
-            descs = list(np.array(self.descriptions)[row_index])
+            descs = list(np.array(self.descriptions)[index])
 
             if type(self.tree) != type(None):
 
@@ -533,97 +593,97 @@ class MultipleSequenceAlignment:
         #             new.column_annotations[k] = v[col_index]
         #     return new
 
-    def sort(self, key=None, reverse=False):
-        """Sort the rows (SeqRecord objects) of the alignment in place.
+    # def sort(self, key=None, reverse=False):
+    #     """Sort the rows (SeqRecord objects) of the alignment in place.
+    #
+    #     This sorts the rows alphabetically using the SeqRecord object id by
+    #     default. The sorting can be controlled by supplying a key function
+    #     which must map each SeqRecord to a sort value.
+    #
+    #     This is useful if you want to add two alignments which use the same
+    #     record identifiers, but in a different order.
+    #
+    #     """
+    #     if key is None:
+    #         self._records.sort(key=lambda r: r.id, reverse=reverse)
+    #     else:
+    #         self._records.sort(key=key, reverse=reverse)
 
-        This sorts the rows alphabetically using the SeqRecord object id by
-        default. The sorting can be controlled by supplying a key function
-        which must map each SeqRecord to a sort value.
-
-        This is useful if you want to add two alignments which use the same
-        record identifiers, but in a different order.
-
-        """
-        if key is None:
-            self._records.sort(key=lambda r: r.id, reverse=reverse)
-        else:
-            self._records.sort(key=key, reverse=reverse)
-
-    @property
-    def substitutions(self):
-        """Return an Array with the number of substitutions of letters in the alignment.
-
-        As an example, consider a multiple sequence alignment of three DNA sequences:
-
-        >>> from Bio.Seq import Seq
-        >>> from Bio.SeqRecord import SeqRecord
-        >>> from Bio.Align import MultipleSeqAlignment
-        >>> seq1 = SeqRecord(Seq("ACGT"), id="seq1")
-        >>> seq2 = SeqRecord(Seq("A--A"), id="seq2")
-        >>> seq3 = SeqRecord(Seq("ACGT"), id="seq3")
-        >>> seq4 = SeqRecord(Seq("TTTC"), id="seq4")
-        >>> alignment = MultipleSeqAlignment([seq1, seq2, seq3, seq4])
-        >>> print(alignment)
-        Alignment with 4 rows and 4 columns
-        ACGT seq1
-        A--A seq2
-        ACGT seq3
-        TTTC seq4
-
-        >>> m = alignment.substitutions
-        >>> print(m)
-            A   C   G   T
-        A 3.0 0.5 0.0 2.5
-        C 0.5 1.0 0.0 2.0
-        G 0.0 0.0 1.0 1.0
-        T 2.5 2.0 1.0 1.0
-        <BLANKLINE>
-
-        Note that the matrix is symmetric, with counts divided equally on both
-        sides of the diagonal. For example, the total number of substitutions
-        between A and T in the alignment is 3.5 + 3.5 = 7.
-
-        Any weights associated with the sequences are taken into account when
-        calculating the substitution matrix.  For example, given the following
-        multiple sequence alignment::
-
-            GTATC  0.5
-            AT--C  0.8
-            CTGTC  1.0
-
-        For the first column we have::
-
-            ('A', 'G') : 0.5 * 0.8 = 0.4
-            ('C', 'G') : 0.5 * 1.0 = 0.5
-            ('A', 'C') : 0.8 * 1.0 = 0.8
-
-        """
-        letters = set.union(*[set(record.seq) for record in self])
-        try:
-            letters.remove("-")
-        except KeyError:
-            pass
-        letters = "".join(sorted(letters))
-        m = substitution_matrices.Array(letters, dims=2)
-        for rec_num1, alignment1 in enumerate(self):
-            seq1 = alignment1.seq
-            weight1 = alignment1.annotations.get("weight", 1.0)
-            for rec_num2, alignment2 in enumerate(self):
-                if rec_num1 == rec_num2:
-                    break
-                seq2 = alignment2.seq
-                weight2 = alignment2.annotations.get("weight", 1.0)
-                for residue1, residue2 in zip(seq1, seq2):
-                    if residue1 == "-":
-                        continue
-                    if residue2 == "-":
-                        continue
-                    m[(residue1, residue2)] += weight1 * weight2
-
-        m += m.transpose()
-        m /= 2.0
-
-        return m
+    # @property
+    # def substitutions(self):
+    #     """Return an Array with the number of substitutions of letters in the alignment.
+    #
+    #     As an example, consider a multiple sequence alignment of three DNA sequences:
+    #
+    #     >>> from Bio.Seq import Seq
+    #     >>> from Bio.SeqRecord import SeqRecord
+    #     >>> from Bio.Align import MultipleSeqAlignment
+    #     >>> seq1 = SeqRecord(Seq("ACGT"), id="seq1")
+    #     >>> seq2 = SeqRecord(Seq("A--A"), id="seq2")
+    #     >>> seq3 = SeqRecord(Seq("ACGT"), id="seq3")
+    #     >>> seq4 = SeqRecord(Seq("TTTC"), id="seq4")
+    #     >>> alignment = MultipleSeqAlignment([seq1, seq2, seq3, seq4])
+    #     >>> print(alignment)
+    #     Alignment with 4 rows and 4 columns
+    #     ACGT seq1
+    #     A--A seq2
+    #     ACGT seq3
+    #     TTTC seq4
+    #
+    #     >>> m = alignment.substitutions
+    #     >>> print(m)
+    #         A   C   G   T
+    #     A 3.0 0.5 0.0 2.5
+    #     C 0.5 1.0 0.0 2.0
+    #     G 0.0 0.0 1.0 1.0
+    #     T 2.5 2.0 1.0 1.0
+    #     <BLANKLINE>
+    #
+    #     Note that the matrix is symmetric, with counts divided equally on both
+    #     sides of the diagonal. For example, the total number of substitutions
+    #     between A and T in the alignment is 3.5 + 3.5 = 7.
+    #
+    #     Any weights associated with the sequences are taken into account when
+    #     calculating the substitution matrix.  For example, given the following
+    #     multiple sequence alignment::
+    #
+    #         GTATC  0.5
+    #         AT--C  0.8
+    #         CTGTC  1.0
+    #
+    #     For the first column we have::
+    #
+    #         ('A', 'G') : 0.5 * 0.8 = 0.4
+    #         ('C', 'G') : 0.5 * 1.0 = 0.5
+    #         ('A', 'C') : 0.8 * 1.0 = 0.8
+    #
+    #     """
+    #     letters = set.union(*[set(record.seq) for record in self])
+    #     try:
+    #         letters.remove("-")
+    #     except KeyError:
+    #         pass
+    #     letters = "".join(sorted(letters))
+    #     m = substitution_matrices.Array(letters, dims=2)
+    #     for rec_num1, alignment1 in enumerate(self):
+    #         seq1 = alignment1.seq
+    #         weight1 = alignment1.annotations.get("weight", 1.0)
+    #         for rec_num2, alignment2 in enumerate(self):
+    #             if rec_num1 == rec_num2:
+    #                 break
+    #             seq2 = alignment2.seq
+    #             weight2 = alignment2.annotations.get("weight", 1.0)
+    #             for residue1, residue2 in zip(seq1, seq2):
+    #                 if residue1 == "-":
+    #                     continue
+    #                 if residue2 == "-":
+    #                     continue
+    #                 m[(residue1, residue2)] += weight1 * weight2
+    #
+    #     m += m.transpose()
+    #     m /= 2.0
+    #
+    #     return m
 
 
     def search_id(self, id_str):
@@ -707,6 +767,11 @@ class MultipleSequenceAlignment:
             elif prune_unmatched:
                 self.tree.prune(term)
 
+    def set_sequence_weights(self, weights):
+
+        self.sequence_weights = np.array(weights)
+        for n,record in enumerate(self._records):
+            record.weight = weights[n]
 
     def get_index(self, id):
 
@@ -783,6 +848,173 @@ class MultipleSequenceAlignment:
 
             self.attach_tree(FastTree(self, model=model, root=root, ladderize=ladderize, cat=cat,
                                 temp_aln=filename))
+
+    def attach_structure(self, structure, nseq=None, name=None, chains='A', model=0):
+
+        if isinstance(structure, str):
+            structure = readPDB(filename, name, chains, model)
+
+        if type(nseq) == None:
+
+            x = self.search_sequence(structure.sequence)
+
+            if isinstance(x, NoneType):
+                print('Could not find sequence')
+                return None
+
+            elif isinstance(x, int):
+                nseq = x
+
+            elif isinstance(x, list):
+                print(len(x), 'matching sequences found! Appending to first...')
+                nseq = x[0]
+
+        elif type(nseq) == str:
+
+            a = np.where(self.ids==nseq)[0]
+            if len(a)==0:
+                a = self.search_id(nseq)[0]
+                if len(a)==0:
+                    print("string", nseq, "is not located anywhere in alignment IDs!")
+                else:
+                    a = a[0]
+            else:
+                a = a[0]
+
+            nseq = a
+
+        record = self._records[nseq]
+
+        # Align the structure's sequence to the record's sequence
+        #  replace gaps in the record's sequence with "x" to not confuse these
+        #  gaps (which we want to remember) with possible new gaps introduced
+        #  in the alignment
+        A = PairwiseAlign(str(record.seq).replace('-','x'), structure.ordered_sequence,
+                            alignment_method='globalms', alignment_params=(2,-1,-0.75,-.1))
+
+        A = A[:,np.where(A.matrix[0]!='-')[0]]
+
+        if '-' in A[0].seq:
+            print(str(A[0].seq).count('-'), "positions not aligned - removing...")
+
+            x = []
+            nres = 0
+            for n,res in enumerate(A.matrix[1]):
+                if res!='-':
+                    nres+=1
+                    x.append(A.matrix[0][n] != '-')
+
+            new_structure = structure[np.array(x)]
+            self.attach_structure(structure, name=name)
+
+        else:
+            structure._alipos = np.where(A.matrix[1]!='-')[0]
+
+        try:
+            record.structures
+        except:
+            record.structures = {}
+
+        if type(name) != None:
+
+            if 0 in record.structures:
+                record.structures[np.max([key for key in record.structures.keys() if type(key)==int])+1] = structure
+            else:
+                record.structures[0] = structure
+
+        else:
+            record.structures[name] = structure
+
+        try:
+            self.structures.append((nseq, structure))
+        except:
+            self.structures = [(nseq, structure)]
+
+class SequenceArray:
+
+    def __init__(self, records):
+
+        self._records = records
+
+        if len(self._records) > 0:
+            self.ids = np.array([record.id for record in self._records])
+            self.names = np.array([record.id for record in self._records])
+            self.descriptions = [record.id for record in self._records]
+
+    def __getitem__(self, index):
+
+        if isinstance(index, int):
+            return self._records[int]
+
+        elif isinstance(index, slice):
+            return SequenceArray(self._records[int])
+
+        elif isinstance(index, (list, np.ndarray)):
+
+            if type(index[0])==np.bool_:
+                return SequenceArray([self._records[k] for k in np.where(index)[0]])
+
+            else:
+                return SequenceArray([self._records[k] for k in index])
+
+        elif isinstance(index, str):
+
+            if index in self.ids:
+                return self._records[self.ids.index(index)]
+            else:
+                raise IndexError("No such ID in SequenceArray. If ID is incomplete, try seqs.search_id(name)")
+
+    def from_file(self, filename, format="Detect"):
+
+        if format=='Detect':
+            ending = filename.split('.')[-1]
+            if 'fa' in ending:
+                format="fasta"
+            elif 'sto' in ending:
+                format = "stockholm"
+            elif 'nex' in ending:
+                format = "nexus"
+            elif "a2m" in ending:
+                format = "fasta"
+
+        self._records = list(SeqIO.parse(filename, format))
+        self.ids = np.array([record.id for record in self._records])
+        self.names = np.array([record.id for record in self._records])
+        self.descriptions = [record.id for record in self._records]
+
+    def search_id(self, id_str):
+
+        """Search for an incomplete ID in the alignment"""
+
+        in_id = np.array([str(id_str) in id for id in self.ids])
+
+        if len(in_id) > 1:
+            return self.__getitem__(np.where(in_id)[0].astype('int'))
+        elif len(in_id)==1:
+            return self.__getitem__(np.where(in_id)[0].astype('int'))[0]
+        else:
+            return []
+
+    def search_ids(self, ids):
+
+        return SequenceArray([search_id(id) for id in ids])
+
+    def search_sequence(self, sequence):
+
+        x = []
+        for nr,record in enumerate(self._records):
+
+            if sequence in record.seq:
+                x.append(nr, seq.index(sequence))
+
+        if len(x)==0:
+            return None
+
+        if len(x)==1:
+            return x[0]
+
+        else:
+            return x
 
     def attach_structure(self, structure, nseq=None, name=None, chains='A', model=0):
 
@@ -1101,3 +1333,13 @@ def PairwiseAlign(sequence1, sequence2, alignment_method, alignment_params):
 
     ali = np.array([np.array(list(alignment[0])), np.array(list(alignment[1]))])
     return MultipleSequenceAlignment(ali)
+
+
+def cluster_sizes(ali):
+
+    try:
+        imat = ali.identity_matrix
+    except:
+        imat = CalcIdentityMatrix(ali)
+
+    return np.array([np.sum(imat[i] > 0.7) for i in range(ali.N)])
