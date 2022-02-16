@@ -12,7 +12,7 @@ To load an alignment from a file:
 msa = readAlignment("alignment.fa", format="fasta")
 ```
 
-Much like a traditional Biopython MSA, this object is essentially a list of Bio.SeqRecord.SeqRecord objects, but it could do a few nice new things:
+Much like a traditional Biopython MSA, this object is essentially a list of Bio.SeqRecord.SeqRecord objects, but it can do a few nice new things:
 
 ```
 msa.ids                      # gives you all of the ids in the sequence alignment
@@ -22,8 +22,8 @@ msa[:,np.array([3,5,6,9])]   # gives a new MSA with the 3rd, 5th, 6th and 9th co
 msa.calc_coverage()          # calculates the alignment coverage and stores it as msa.coverage
 msa.calc_frequencies()       # calculates the frequency of each amino acid and stores it as msa.frequencies
 msa.search_id("HUMAN")       # returns all sequences with "HUMAN" in the id
-msa.search_sequence("ACYWL") # searches for a sequence record with the following subsequence
-msa.sequence_lengths()       # returns the length of each sequence without gaps in the alignment
+msa.search_sequence("ACYWL") # searches for sequence record(s) with the following subsequence
+msa.sequence_lengths()       # returns the length of each sequence in the alignment, not countin gaps
 msa.dealign()                # gives you all dealigned sequences (gaps removed)
 msa.save(filename)           # saves to a file
 ```
