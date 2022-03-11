@@ -11,11 +11,15 @@ from Bio.Align import MultipleSeqAlignment
 from ProteinStructure import *
 from TreeBuilders import *
 
+# Otherwise we get some annoying pandas warnings
+import warnings
+warnings.simplefilter("ignore", UserWarning)
+
 from copy import copy,deepcopy
 
 alphabet = '-ACDEFGHIKLMNPQRSTVWY'
 
-def readAlignment(alignment_file, format="fasta", calc_frequencies=True):
+def readAlignment(alignment_file, format="fasta", calc_frequencies=False):
 
     msa = MultipleSequenceAlignment(AlignIO.read(alignment_file, format=format))
 
@@ -331,6 +335,33 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         return MultipleSequenceAlignment(np.char.replace(self.matrix, a, b), ids=self.ids)
 
+
+    def set_ids(self, ids):
+
+        """Reset all IDs in place to a new list. Will both change self.ids and the .id attribute
+           of each individual sequence record."""
+
+        if len(ids) == self.N:
+            self.ids = ids
+            for n,record in enumerate(self._records):
+                seq.id = ids[n]
+        else:
+            raise ValueError('ERROR: cannot use id list of length', len(ids), 'for an alignment with', self.N, 'sequences')
+
+    def modify_ids(melf, func):
+
+        """Modify all IDs in place with a function. Either pre-define the function or use lambda, e.g.
+            alignment.modify_ids(lambda x:x.split('|')[2])"""
+
+        ids = []
+
+        for seq in self._records:
+            seq.id = func(seq.id)
+            ids.append(seq.id)
+
+        self.ids = np.array(ids)
+
+
     def __getitem__(self, index):
         """Access part of the alignment. Indexes like a 2D numpy array and returns
         another MultipleSequenceAlignment object unless:
@@ -342,7 +373,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
             return self._records[index]
 
         elif isinstance(index, slice):
-            return self.__getitem__(index, np.arange(self.L))
+            return self.__getitem__(np.arange(self.L)[index])
 
         elif isinstance(index, np.ndarray):
             ids = self.ids[index]; names = self.names[index]
@@ -350,7 +381,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
             if type(self.tree) != type(None):
 
-                if type(x[0])==np.bool_:
+                if type(index[0])==np.bool_:
                     branches = [self._records[k] for k in np.where(index)[0]]
                 else:
                     branches = [self._records[k] for k in index]
@@ -419,11 +450,33 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         """Search for an incomplete ID in the alignment"""
 
         in_id = np.array([str(id_str) in id for id in self.ids])
-        return self.__getitem__(np.where(in_id)[0].astype('int'))
+        matched = np.where(in_id)[0].astype('int')
+
+        if len(matched) == 0:
+            return None
+
+        elif len(matched) == 1:
+            return self.__getitem__(int(matched[0]))
+
+        else:
+            return self.__getitem__(matched)
 
     def search_ids(self, ids):
 
-        return MultipleSequenceAlignment([search_id(id)[0] for id in ids])
+        seqs = []
+
+        for id in ids:
+            matched = self.search_id(id)
+
+            if isinstance(matched, MultipleSequenceAlignment):
+                for match in matched:
+                    seqs.append(match)
+
+            elif isinstance(matched, SeqRecord):
+                seqs.append(SeqRecord)
+
+        return MultipleSequenceAlignment(seqs)
+
 
     def search_sequence(self, sequence, include_gaps=False, case_sensitive=False):
 
