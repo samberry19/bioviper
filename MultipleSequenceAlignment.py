@@ -327,13 +327,14 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         """Make all letters in an alignment uppercase."""
 
-        return MultipleSequenceAlignment(np.char.upper(self.matrix), ids=self.ids)
+        return MultipleSequenceAlignment(np.char.upper(self.matrix), ids=self.ids, names=self.names, descriptions=self.descriptions)
+
 
     def replace(self, a, b):
 
         """Replace one letter in an alignment with another."""
 
-        return MultipleSequenceAlignment(np.char.replace(self.matrix, a, b), ids=self.ids)
+        return MultipleSequenceAlignment(np.char.replace(self.matrix, a, b), ids=self.ids, names=self.names, descriptions=self.descriptions)
 
 
     def set_ids(self, ids):
@@ -347,6 +348,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
                 seq.id = ids[n]
         else:
             raise ValueError('ERROR: cannot use id list of length', len(ids), 'for an alignment with', self.N, 'sequences')
+
 
     def modify_ids(melf, func):
 
@@ -567,14 +569,14 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         else:
 
             a = self.search_id(id)
-            if a.N == 0:
+            if type(a)==type(None):
                 return None
 
-            elif a.N == 1:
-                return self.get_index(a[0].id)
+            elif type(a) == SeqRecord:
+                return self.get_index(a.id)
 
             else:
-                return np.array([self.get_index(record.name) for record in a])
+                return array([self.get_index(seq.id) for seq in a])
 
     def fix_tree(self):
 
@@ -660,11 +662,9 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
             a = np.where(self.ids==nseq)[0]
             if len(a)==0:
-                a = self.search_id(nseq)[0]
-                if len(a)==0:
+                a = self.get_index(nseq)
+                if type(a) == type(None):
                     print("string", nseq, "is not located anywhere in alignment IDs!")
-                else:
-                    a = a[0]
             else:
                 a = a[0]
 
