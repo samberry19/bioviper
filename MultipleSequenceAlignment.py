@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from Bio import AlignIO, Phylo, PDB, pairwise2
+from Bio import AlignIO, Phylo, SeqIO, PDB, pairwise2
 
 from Bio.Align import _aligners
 from Bio.Align import substitution_matrices
@@ -705,25 +705,42 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         except:
             self.structures = [(nseq, structure)]
 
+def readSequences(filename, format="Detect"):
+
+    if format=='Detect':
+        ending = filename.split('.')[-1]
+        if 'fa' in ending:
+            format="fasta"
+        elif 'sto' in ending:
+            format = "stockholm"
+        elif 'nex' in ending:
+            format = "nexus"
+        elif "a2m" in ending:
+            format = "fasta"
+
+    return SequenceArray(list(SeqIO.parse(filename, format)))
 
 class SequenceArray:
 
     def __init__(self, records):
 
         self._records = records
+        self.ids = np.array([record.id for record in self._records])
+        self.names = np.array([record.id for record in self._records])
+        self.descriptions = [record.id for record in self._records]
+        self.N = len(self._records)
+        self.L = np.array([len(rec.seq) for rec in self._records])
 
-        if len(self._records) > 0:
-            self.ids = np.array([record.id for record in self._records])
-            self.names = np.array([record.id for record in self._records])
-            self.descriptions = [record.id for record in self._records]
+    def __len__(self):
+        return self.N
 
     def __getitem__(self, index):
 
         if isinstance(index, int):
-            return self._records[int]
+            return self._records[index]
 
         elif isinstance(index, slice):
-            return SequenceArray(self._records[int])
+            return SequenceArray(self._records[index])
 
         elif isinstance(index, (list, np.ndarray)):
 
@@ -764,16 +781,19 @@ class SequenceArray:
 
         in_id = np.array([str(id_str) in id for id in self.ids])
 
-        if len(in_id) > 1:
+        if np.sum(in_id) > 1:
             return self.__getitem__(np.where(in_id)[0].astype('int'))
-        elif len(in_id)==1:
+        elif np.sum(in_id)==1:
             return self.__getitem__(np.where(in_id)[0].astype('int'))[0]
         else:
             return []
 
+    def __iter__(self):
+        return __iter__(self._records)
+
     def search_ids(self, ids):
 
-        return SequenceArray([search_id(id) for id in ids])
+        return SequenceArray([self.search_id(id) for id in ids])
 
     def search_sequence(self, sequence):
 
@@ -860,6 +880,23 @@ class SequenceArray:
             self.structures.append((nseq, structure))
         except:
             self.structures = [(nseq, structure)]
+
+    def save(self, filename, format='Auto'):
+
+        if format=='Auto':
+            try:
+                ending = filename.split('.')[-1]
+                if "fa" in ending:
+                    format = "fasta"
+                elif "sto" in ending:
+                    format = "stockholm"
+                elif "clust" in ending:
+                    format = "clustal"
+            except:
+                return TypeError("Please pass a format or a filename with an ending containing fa, sto or clust")
+
+        SeqIO.write(MultipleSeqAlignment(self._records), filename, format)
+
 
 def PairwiseAlign(sequence1, sequence2, alignment_method, alignment_params):
 
