@@ -266,16 +266,18 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
                 )
 
     def _get_per_column_annotations(self):
-        if self._per_col_annotations is None:
-            # This happens if empty at initialisation
-            if len(self):
-                # Use the standard method to get the length
-                expected_length = self.get_alignment_length()
-            else:
-                # Should this raise an exception? Compare SeqRecord behaviour...
-                expected_length = 0
-            self._per_col_annotations = _RestrictedDict(length=expected_length)
-        return self._per_col_annotations
+        # if self._per_col_annotations is None:
+        #     # This happens if empty at initialisation
+        #     if len(self):
+        #         # Use the standard method to get the length
+        #         expected_length = self.get_alignment_length()
+        #     else:
+        #         # Should this raise an exception? Compare SeqRecord behaviour...
+        #         expected_length = 0
+        #     self._per_col_annotations = _RestrictedDict(length=expected_length)
+        #return self._per_col_annotations
+
+        return None
 
     column_annotations = property(
         fget=_get_per_column_annotations,
@@ -470,12 +472,14 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         for id in ids:
             matched = self.search_id(id)
 
-            if isinstance(matched, MultipleSequenceAlignment):
-                for match in matched:
-                    seqs.append(match)
+            if not isinstance(matched, type(None)):
 
-            elif isinstance(matched, SeqRecord):
-                seqs.append(SeqRecord)
+                if isinstance(matched, MultipleSequenceAlignment):
+                    for match in matched:
+                        seqs.append(match)
+
+                elif isinstance(matched, SeqRecord):
+                    seqs.append(matched)
 
         return MultipleSequenceAlignment(seqs)
 
@@ -603,7 +607,26 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         """For a clade in the attached tree, subset the alignment to get only those sequences."""
 
-        return self.__getitem__(np.array([term.nseq for term in clade.get_terminals()]))
+        try:
+            return self.__getitem__(np.array([term.nseq for term in clade.get_terminals()]))
+
+        # This will happen if some of the terminals don't have a .nseq attribute
+        except AttributeError:
+
+            # Define the terminals and their names
+            terminals = clade.get_terminals()
+            terminal_names = [term.name for term in terminals]
+
+            # Find which ones are actually in
+            isin = np.isin(terminal_names, self.ids)
+
+            # If any were found, return them
+            if np.sum(isin) > 0:
+                return self.__getitem__(np.array([terminals[k].nseq for k in np.where(isin)[0]]))
+
+            # Else nothing is returned
+            else:
+                return None
 
     def build_tree(self, method='nj', model='autodetect', root=True, ladderize=True, filename="fasttree.fa"):
 

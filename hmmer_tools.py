@@ -1,5 +1,5 @@
 from __init__ import *
-import subprocecss
+import subprocess
 import Bio
 
 def hmmalign(sequences, hmm, outfilename='tmp.sto', reload=True):
