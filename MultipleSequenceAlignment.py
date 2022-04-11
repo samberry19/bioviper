@@ -94,7 +94,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         else:
             '''If you pass it a list of record objects, it will initialize it as a
             normal MultipleSeqAlignment object.'''
-
+            
             super().__init__(records)
 
         # Annotations about the whole alignment
@@ -451,7 +451,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         """Search for an incomplete ID in the alignment"""
 
-        in_id = np.array([str(id_str) in id for id in self.ids])
+        in_id = np.array([str(id_str) in id_val for id_val in self.ids])
         matched = np.where(in_id)[0].astype('int')
 
         if len(matched) == 0:
@@ -467,15 +467,15 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         seqs = []
 
-        for id in ids:
-            matched = self.search_id(id)
+        for id_val in ids:
+            matched = self.search_id(id_val)
 
             if isinstance(matched, MultipleSequenceAlignment):
                 for match in matched:
                     seqs.append(match)
 
             elif isinstance(matched, SeqRecord):
-                seqs.append(SeqRecord)
+                seqs.append(matched)
 
         return MultipleSequenceAlignment(seqs)
 
@@ -779,7 +779,7 @@ class SequenceArray:
 
         """Search for an incomplete ID in the alignment"""
 
-        in_id = np.array([str(id_str) in id for id in self.ids])
+        in_id = np.array([str(id_str) in id_val for id_val in self.ids])
 
         if np.sum(in_id) > 1:
             return self.__getitem__(np.where(in_id)[0].astype('int'))
@@ -793,7 +793,7 @@ class SequenceArray:
 
     def search_ids(self, ids):
 
-        return SequenceArray([self.search_id(id) for id in ids])
+        return SequenceArray([self.search_id(id_val) for id_val in ids])
 
     def search_sequence(self, sequence):
 
