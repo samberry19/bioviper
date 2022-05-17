@@ -266,16 +266,18 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
                 )
 
     def _get_per_column_annotations(self):
-        if self._per_col_annotations is None:
-            # This happens if empty at initialisation
-            if len(self):
-                # Use the standard method to get the length
-                expected_length = self.get_alignment_length()
-            else:
-                # Should this raise an exception? Compare SeqRecord behaviour...
-                expected_length = 0
-            self._per_col_annotations = _RestrictedDict(length=expected_length)
-        return self._per_col_annotations
+        # if self._per_col_annotations is None:
+        #     # This happens if empty at initialisation
+        #     if len(self):
+        #         # Use the standard method to get the length
+        #         expected_length = self.get_alignment_length()
+        #     else:
+        #         # Should this raise an exception? Compare SeqRecord behaviour...
+        #         expected_length = 0
+        #     self._per_col_annotations = _RestrictedDict(length=expected_length)
+        #return self._per_col_annotations
+
+        return None
 
     column_annotations = property(
         fget=_get_per_column_annotations,
@@ -470,12 +472,15 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         for id_val in ids:
             matched = self.search_id(id_val)
 
-            if isinstance(matched, MultipleSequenceAlignment):
-                for match in matched:
-                    seqs.append(match)
+            if not isinstance(matched, type(None)):
 
-            elif isinstance(matched, SeqRecord):
-                seqs.append(matched)
+                if isinstance(matched, MultipleSequenceAlignment):
+                    for match in matched:
+                        seqs.append(match)
+
+                elif isinstance(matched, SeqRecord):
+                    seqs.append(matched)
+
 
         return MultipleSequenceAlignment(seqs)
 
@@ -599,11 +604,58 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
                     self.tree.prune(branch)
 
 
+    def subset_by_ids(self, ids, sort=True):
+
+        if sort:
+
+            '''Sort both lists and search - orders of magnitude faster for
+                    very large alignments.'''
+
+            sorted_ali = self.__getitem__(np.argsort(self.ids))
+            ids_sorted = sorted_ali.ids
+
+            # If some ids in the id list aren't in self.ids, we'll ignore them
+            common_ids = np.intersect1d(ids, ids_sorted)
+            x = [] # Initialize a list
+            n = 0  # Iterator as we work our way through self.ids
+
+            for idx in common_ids:  # Iterate through the common ids
+                                      # each will fall in order in the sorted list
+                while (ids_sorted[n] != idx) & (n<(self.N-1)):
+                    n+=1
+                x.append(n)
+
+            return sorted_ali[np.array(x)]
+
+        else:
+            # The simple way, preserving order, but very slow for large alignments
+            return self.__getitem__(np.isin(self.ids, ids))
+
+
     def subset_by_clade(self, clade):
 
         """For a clade in the attached tree, subset the alignment to get only those sequences."""
 
-        return self.__getitem__(np.array([term.nseq for term in clade.get_terminals()]))
+        try:
+            return self.__getitem__(np.array([term.nseq for term in clade.get_terminals()]))
+
+        # This will happen if some of the terminals don't have a .nseq attribute
+        except AttributeError:
+
+            # Define the terminals and their names
+            terminals = clade.get_terminals()
+            terminal_names = [term.name for term in terminals]
+
+            # Find which ones are actually in
+            isin = np.isin(terminal_names, self.ids)
+
+            # If any were found, return them
+            if np.sum(isin) > 0:
+                return self.__getitem__(np.array([terminals[k].nseq for k in np.where(isin)[0]]))
+
+            # Else nothing is returned
+            else:
+                return None
 
     def build_tree(self, method='nj', model='autodetect', root=True, ladderize=True, filename="fasttree.fa"):
 
