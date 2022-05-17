@@ -603,6 +603,34 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
                     self.tree.prune(branch)
 
 
+    def subset_by_ids(self, ids, sort=True):
+
+        if sort:
+
+            '''Sort both lists and search - orders of magnitude faster for
+                    very large alignments.'''
+
+            sorted_ali = self.__getitem__(np.argsort(self.ids))
+            ids_sorted = sorted_ali.ids
+
+            # If some ids in the id list aren't in self.ids, we'll ignore them
+            common_ids = np.intersect1d(ids, ids_sorted)
+            x = [] # Initialize a list
+            n = 0  # Iterator as we work our way through self.ids
+
+            for idx in common_ids:  # Iterate through the common ids
+                                      # each will fall in order in the sorted list
+                while (ids_sorted[n] != idx) & (n<(self.N-1)):
+                    n+=1
+                x.append(n)
+
+            return sorted_ali[np.array(x)]
+
+        else:
+            # The simple way, preserving order, but very slow for large alignments
+            return self.__getitem__(np.isin(self.ids, ids))
+
+
     def subset_by_clade(self, clade):
 
         """For a clade in the attached tree, subset the alignment to get only those sequences."""
