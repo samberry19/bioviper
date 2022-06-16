@@ -94,7 +94,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         else:
             '''If you pass it a list of record objects, it will initialize it as a
             normal MultipleSeqAlignment object.'''
-            
+
             super().__init__(records)
 
         # Annotations about the whole alignment
@@ -338,6 +338,18 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         return MultipleSequenceAlignment(np.char.replace(self.matrix, a, b), ids=self.ids, names=self.names, descriptions=self.descriptions)
 
+    def standardize(self):
+
+        ''' Make all amino acids upper case and replace all noncanonical characters with gaps ('-') '''
+
+        matrix_upper = np.char.upper(self.matrix)
+        noncanonical_characters = [letter for letter in np.unique(matrix_upper) if letter not in alphabet]
+
+        for character in noncanonical_characters:
+            matrix_upper = np.char.replace(matrix_upper, character, '-')
+
+        return MultipleSequenceAlignment(matrix_upper, ids=self.ids,
+                                names=self.names, descriptions=self.descriptions)
 
     def set_ids(self, ids):
 
