@@ -1,8 +1,27 @@
 # alignment-tools
+
+**Warning**: this code is still under development - while most parts are functional, there are still likely bugs and features that are yet to be implemented. Make a pull request if you have an issue!
+
 Contains a new subclass of Biopython's MultipleSeqAlignment with richer functionality, allowing for easy manipulation of alignments, phylogenetic trees and protein structures.
 
 The core of this code is a set of three new classes: a MultipleSequenceAlignment class, a SequenceArray class (for unaligned sequences) and a ProteinStructure class.
 I am working on a set of Jupyter notebooks that should explain the basic usage of these objects.
+
+## Installation
+
+On Mac/Linux, I would recommend cloning or downloading this repository and then installing it into a conda environment. You can create a conda environment, let's called it "evo," assuming you have conda installed with:
+
+```
+conda create -n evo pip numpy pandas Biopython
+```
+
+Then navigate to the folder alignment_tools and type:
+
+```
+conda install .
+```
+
+I have no idea how to do this on Windows, but let me know if you install it and how and I can add it here :)
 
 ## Basics
 
