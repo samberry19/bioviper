@@ -1,10 +1,11 @@
-# alignment-tools
+# bioviper
 
 **Warning**: this code is still under development - while most parts are functional, there are still likely bugs and features that are yet to be implemented. Make a pull request if you have an issue!
 
-Contains a new subclass of Biopython's MultipleSeqAlignment with richer functionality, allowing for easy manipulation of alignments, phylogenetic trees and protein structures.
+A set of classes and functions built on top of Biopython to make working with biological data - primarily sequence alignments, protein structures and phylogenetic trees - simpler and more straightforward.
 
 The core of this code is a set of three new classes: a MultipleSequenceAlignment class, a SequenceArray class (for unaligned sequences) and a ProteinStructure class.
+
 I am working on a set of Jupyter notebooks that should explain the basic usage of these objects.
 
 ## Installation
