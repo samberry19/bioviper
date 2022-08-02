@@ -10,19 +10,17 @@ I am working on a set of Jupyter notebooks that should explain the basic usage o
 
 ## Installation
 
-On Mac/Linux, I would recommend cloning or downloading this repository and then installing it into a conda environment. You can create a conda environment, let's called it "evo," assuming you have conda installed with:
+bioviper is now pip installable - first install numpy, pandas and biopython and then type:
 
 ```
-conda create -n evo pip numpy pandas Biopython
+pip install bioviper
 ```
 
-Then navigate to the folder alignment_tools and type:
+alternatively, use conda:
 
 ```
-conda install .
+conda install bioviper
 ```
-
-I have no idea how to do this on Windows, but let me know if you install it and how and I can add it here :)
 
 ## Basics
 
