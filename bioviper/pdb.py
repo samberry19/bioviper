@@ -212,7 +212,7 @@ class ProteinStructure:
         Get the distance between two residues in a structure by passing the numbers of two residues.
 
         Has three available 'modes' of calculating the distance:
-        
+
             "C-alphas" : gives the distance between the alpha carbons of each residue (DEFAULT)
                            set method="CA", atoms=None (Default)
             "min" :      minimum distance between any atoms in the residues
@@ -272,7 +272,7 @@ class ProteinStructure:
         io.set_structure(self.chain)
         io.save(pdb_file)
 
-class Complex(Structure):
+#class Complex(Structure):
 
 
 def CalcDistanceMatrix(Structure):
