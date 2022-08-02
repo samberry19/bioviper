@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bioviper"
+version = "0.1.2"
+authors = [
+  { name="Sam Berry", email="sberry@g.harvard.edu" },
+]
+description = "Enhancements to Biopython for working with biological data"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.isort]
+profile = "black"
+src_paths = "bioviper"
+multi_line_output = 3
+
+[tool.pydocstyle]
+match_dir = "bioviper"
+convention = "numpy"
+
+[project.urls]
+"Homepage" = "https://github.com/samberry19/bioviper"
+"Bug Tracker" = "https://github.com/samberry19/bioviper/issues"

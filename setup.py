@@ -1,7 +1,9 @@
 from distutils.core import setup
-setup(name='alignment_tools',
-      version='0.1',
+setup(name='bioviper',
+      version='0.1.2',
       author='Sam Berry',
       author_email="sberry@g.harvard.edu",
-      py_modules=["MultipleSequenceAlignment", "ProteinStructure", "TreeBuilders", "TreeAnalysis", "hmmer_tools"]
+      description = "Enhancements to Biopython for working with biological data",
+      py_modules=["bioviper", "bioviper.msa", "bioviper.pdb", "bioviper.hmmer_tools",
+                  "bioviper.phylo"]
       )

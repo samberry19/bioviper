@@ -1,21 +1,33 @@
 import numpy as np
 import pandas as pd
 from Bio import PDB, pairwise2
-
-from Bio.Align import _aligners
-from Bio.Align import substitution_matrices
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord,_RestrictedDict
 from Bio.PDB.DSSP import DSSP
 
 from copy import copy
 
-def readPDB(filename, name, chains='A', model=0):
+def readPDB(filename, name=None, chains='A', model=0):
 
     '''
     Given a PDB code and a directory of where to find the structure, returns
     the distance matrix and residue ids.
+
+    Inputs:
+        filename: the filepath to your .pdb file
+        name: an optional name to assign the structure, can be the PDB code
+            (generated automatically from the filename if you don't pass one)
+        chains: which chains of the structure to load. Defaults to "A."
+            Can also pass 'all', which will load all chains.
+        model: which model to use from multi-model PDBs. Defaults to 0."
+
+    Outputs:
+        sturcture: a ProteinStructure object
     '''
+
+    # If you don't pass a name, automatically fill in a name from the pdb file
+    #  (for some reason Biopython's PDBParser requires a "PDB code" which can really
+    #    just be any name, doesn't have to be the real PDB code)
+    if type(name) == NoneType:
+        name = filename.split(".")[0]
 
     # Load the structure using Bio.PDB
     structure = PDB.PDBParser(QUIET=True).get_structure(name, filename)
@@ -125,11 +137,14 @@ class ProteinStructure:
                 return ValueError("No such residue in protein!")
 
         elif isinstance(index, slice):
-            sel = np.array([np.where(self.residue_ids==i)[0][0] for i in index])
-            return ProteinStructure(self.residues[sel])
+            return ProteinStructure(residues[index], name=self.name,
+                    annotation_type=self._annotation_type, annotate_by=self._annotate_by,
+                    resolution=self.resolution))
 
         elif isinstance(index, (list, np.ndarray)):
-            return ProteinStructure([self.residues[k] for k in index])
+            return ProteinStructure([self.residues[k] for k in index], name=self.name,
+                    annotation_type=self._annotation_type, annotate_by=self._annotate_by,
+                    resolution=self.resolution))
 
     def __iter__(self):
         return iter(self.residues)
@@ -191,6 +206,46 @@ class ProteinStructure:
 
         return self.dmatrix
 
+    def distance(self, i, j, method="CA", atoms=None):
+
+        '''
+        Get the distance between two residues in a structure by passing the numbers of two residues.
+
+        Has three available 'modes' of calculating the distance:
+        
+            "C-alphas" : gives the distance between the alpha carbons of each residue (DEFAULT)
+                           set method="CA", atoms=None (Default)
+            "min" :      minimum distance between any atoms in the residues
+                           set method="min", atoms=None (Default)
+            "atoms" :      pick user-defined atoms from each residue to get a very specific distance
+                            atoms = (ID_1, ID_2), e.g. atoms=("O1", "O2") gives distance between O1 in the
+                            first residue and O2 in the second residue.
+                            the method keyword can be set to anything, it is ignored
+
+        '''
+
+        if isinstance(atoms, (list, tuple)):
+
+            if len(atoms)==2:
+                a1 = ProteinStructure([structure_1.residues[i]], name='p1').select(atoms(atoms[0])).xyz[0]
+                a2 = ProteinStructure([structure_1.residues[j]], name='p2').select(atoms(atoms[1])).xyz[0]
+
+                return np.sqrt(np.sum((a1 - a2)**2))
+
+            else:
+                return IndexError(
+                    "To get distances between user-selected atoms, you must pass a list of 2 valid PDB atom indices"
+                )
+
+        elif method.upper() == 'CA':
+            calphas = self.select_atoms("CA")
+            return np.sqrt(np.sum((calphas.xyz[i]-calphas.xyz[j])**2))
+
+        elif method.upper() == 'MIN':
+            a1 = ProteinStructure([structure_1.residues[i]], name='p1').xyz
+            a2 = ProteinStructure([structure_1.residues[j]], name='p2').xyz
+            return np.min(np.sqrt(np.sum((a1[:,None,:] - a2[None,:,:])**2, axis=2)))
+
     def contacts(self, threshold, dist_threshold=None):
 
         if type(self.dmatrix)==type(None):
@@ -216,6 +271,9 @@ class ProteinStructure:
         io = PDB.PDBIO()
         io.set_structure(self.chain)
         io.save(pdb_file)
+
+class Complex(Structure):
+
 
 def CalcDistanceMatrix(Structure):
 

@@ -2,24 +2,11 @@ import numpy as np
 from Bio import Phylo,AlignIO,SeqIO
 from Bio.Phylo.TreeConstruction import DistanceCalculator,DistanceTreeConstructor
 from Bio.Phylo.Applications import FastTreeCommandline,PhymlCommandline
-#from MSA import MultipleSequenceAlignment
+from msa import MultipleSequenceAlignment, CalcIdentityMatrix
+
 import subprocess
 
 blosum_options = np.array([45, 50, 55, 60, 62, 65, 70, 75, 80, 85, 90, 95])
-
-def CalcIdentityMatrix(msa):
-
-    '''Code to calculate a percent identity matrix between every pair of sequences
-    in a multiple sequence alignment. Uses numpy array broadcasting and so is relatively
-    memory-intensive but much faster than BioPython's build in method'''
-
-    IM = []
-    for seq in msa.matrix:
-
-        # Take the mean identity of the sequence with every other sequence
-        IM.append(np.mean(seq==msa.matrix, axis=1))
-
-    return np.array(IM)
 
 def autodetect_blosum_matrix(msa):
 

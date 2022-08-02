@@ -8,8 +8,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord,_RestrictedDict
 from Bio.Align import MultipleSeqAlignment
 
-from ProteinStructure import *
-from TreeBuilders import *
+from .pdb import readPDB
 
 # Otherwise we get some annoying pandas warnings
 import warnings
@@ -994,3 +993,75 @@ def cluster_sizes(ali, thresh):
         imat = CalcIdentityMatrix(ali)
 
     return np.array([np.sum(imat[i] > thresh) for i in range(ali.N)])
+
+def CalcIdentityMatrix(msa, gap_handling=1):
+
+    '''Code to calculate a percent identity matrix between every pair of sequences
+    in a multiple sequence alignment. Uses numpy array broadcasting and so is much faster
+    than Biopython's built-in method.
+
+    Comes with three options for handling gap characters when calculating identity:
+        gap_handling = 0 ("keep_all") :
+                            treats gaps as a character, so two gaps are "equal"
+
+        gap_handling = 1 ("ignore_doubles") :
+                            doesn't include positions where both sequences are gapped but
+                            if only one is gapped this counts as a difference
+                            (DEFAULT, this one makes the most sense to me)
+
+        gap_handling = 2 ("ignore_all"):
+                            ignore positions that are gapped in either sequence
+    '''
+
+    # Initialize the identity matrix
+    IM = []
+    for nseq, seq in enumerate(msa.matrix):
+
+        # If we're treating gaps as a character, this is easy
+        #  loop through sequences first rather than doing it all at once with numpy to lower memory usage
+        if str(gap_handling) in ('0', 'keep_all', 'False'):
+
+            # Take the mean identity of the sequence with every other sequence
+            IM.append(np.mean(seq==msa.matrix, axis=1))
+
+        # We need to do a little bit more to ignore gaps
+        if str(gap_handling) in ('1', 'ignore_doubles'):
+
+            # We're going to loop through sequences again
+            ids = []
+
+            # Don't need to precalculate the ._coverage_mask if it's already defined for that MSA
+            try:
+                msa._coverage_mask[nseq]
+            except:
+                msa._coverage_mask = np.array([msa.matrix[n]!='-' for n in range(msa.N)])
+
+            for n in range(msa.N):
+
+                # If either is TRUE, return TRUE
+                use_pos = np.add(msa._coverage_mask[n], msa._coverage_mask[nseq])
+
+                #
+                ids.append(np.mean(seq[use_pos]==msa.matrix[n][use_pos]))
+
+            IM.append(ids)
+
+        if str(gap_handling) in ('2', 'ignore_all'):
+
+            ids = []
+
+            try:
+                msa._coverage_mask[nseq]
+            except:
+                msa._coverage_mask = np.array([msa.matrix[n]!='-' for n in range(msa.N)])
+
+            for n in range(msa.N):
+
+                # If either is FALSE, return FALSE
+                use_pos = msa._coverage_mask[n] & msa._coverage_mask[nseq]
+
+                ids.append(np.mean(seq[use_pos]==msa.matrix[n][use_pos]))
+
+            IM.append(ids)
+
+    return np.array(IM)
