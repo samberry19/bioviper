@@ -271,20 +271,20 @@ def get_contacts(structure, thresh, dist_threshold=None):
     Calculate contacts for which the C-alphas are within some threshold for a ProteinStructure object.
     '''
 
-        if type(self.dmatrix)==type(None):
-            self.dmatrix = CalcDistanceMatrix(self)
+    if type(self.dmatrix)==type(None):
+        self.dmatrix = CalcDistanceMatrix(self)
 
-        if type(dist_threshold)==type(None):
+    if type(dist_threshold)==type(None):
 
-            return structure.residue_ids[np.where(structure.distance_matrix() < thresh)[0]], \
-                   structure.residue_ids[np.where(structure.distance_matrix() < thresh)[1]]
+        return structure.residue_ids[np.where(structure.distance_matrix() < thresh)[0]], \
+               structure.residue_ids[np.where(structure.distance_matrix() < thresh)[1]]
 
-        else:
-            s = self.dmatrix.shape[0]
-            off_diag = np.abs(np.arange(s)[None,:] - np.arange(s)[:,None]) > dist_threshold
+    else:
+        s = self.dmatrix.shape[0]
+        off_diag = np.abs(np.arange(s)[None,:] - np.arange(s)[:,None]) > dist_threshold
 
-            return structure.residue_ids[np.where((structure.distance_matrix() < thresh))&(off_diag))[0]], \
-                   structure.residue_ids[np.where((structure.distance_matrix() < thresh))&(off_diag))[1]]
+        return structure.residue_ids[np.where((structure.distance_matrix() < thresh))&(off_diag))[0]], \
+               structure.residue_ids[np.where((structure.distance_matrix() < thresh))&(off_diag))[1]]
 
 
 
