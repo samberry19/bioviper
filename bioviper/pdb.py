@@ -26,8 +26,17 @@ def readPDB(filename, name=None, chains='A', model=0):
     # If you don't pass a name, automatically fill in a name from the pdb file
     #  (for some reason Biopython's PDBParser requires a "PDB code" which can really
     #    just be any name, doesn't have to be the real PDB code)
-    if type(name) == NoneType:
-        name = filename.split(".")[0]
+    if type(name) == type(None):
+        if '/' in filename:
+            end_path = filename.split('/')[-1]
+            if '.' in end_path:
+                name = end_path.split('.')[0]
+            else:
+                name = end_path
+        else:
+            if '.' in filename:
+                name = filename.split(".")[-2]
+            name = filename
 
     # Load the structure using Bio.PDB
     structure = PDB.PDBParser(QUIET=True).get_structure(name, filename)
