@@ -283,8 +283,8 @@ def get_contacts(structure, thresh, dist_threshold=None):
         s = self.dmatrix.shape[0]
         off_diag = np.abs(np.arange(s)[None,:] - np.arange(s)[:,None]) > dist_threshold
 
-        return structure.residue_ids[np.where((structure.distance_matrix() < thresh))&(off_diag))[0]], \
-               structure.residue_ids[np.where((structure.distance_matrix() < thresh))&(off_diag))[1]]
+        return structure.residue_ids[np.where((structure.distance_matrix() < thresh)&(off_diag))[0]], \
+               structure.residue_ids[np.where((structure.distance_matrix() < thresh)&(off_diag))[1]]
 
 
 
