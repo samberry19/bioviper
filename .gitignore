@@ -51,3 +51,4 @@ docs/_build/
 
 # Mac system trash
 .DS_store
+*.ipynb

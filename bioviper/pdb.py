@@ -95,7 +95,7 @@ class ProteinStructure:
         self.atoms = np.concatenate([[atom for atom in residue] for residue in self.residues])
         self.n_atoms = len(self.atoms)
         self.xyz = np.array([atom.coord for atom in self.atoms])
-        self.dmatrix = None
+        self.dmatrix = None; self.distance_method = None
         self._annotation_type = annotation_type
         self._annotate_by = annotate_by
         self.resolution = resolution
@@ -139,12 +139,12 @@ class ProteinStructure:
         elif isinstance(index, slice):
             return ProteinStructure(residues[index], name=self.name,
                     annotation_type=self._annotation_type, annotate_by=self._annotate_by,
-                    resolution=self.resolution))
+                    resolution=self.resolution)
 
         elif isinstance(index, (list, np.ndarray)):
             return ProteinStructure([self.residues[k] for k in index], name=self.name,
                     annotation_type=self._annotation_type, annotate_by=self._annotate_by,
-                    resolution=self.resolution))
+                    resolution=self.resolution)
 
     def __iter__(self):
         return iter(self.residues)
@@ -248,16 +248,7 @@ class ProteinStructure:
 
     def contacts(self, threshold, dist_threshold=None):
 
-        if type(self.dmatrix)==type(None):
-            self.dmatrix = CalcDistanceMatrix(self)
-
-        if type(dist_threshold)==type(None):
-            return np.where(self.dmatrix < threshold)
-        else:
-            s = self.dmatrix.shape[0]
-            off_diag = np.abs(np.arange(s)[None,:] - np.arange(s)[:,None]) > dist_threshold
-            return np.where((self.dmatrix < threshold)&(off_diag))
-
+        return get_contacts(self, threshold, dist_threshold)
 
     def annotate_secondary_structure(dssp_path='mkdssp', filename='temp.pdb'):
 
@@ -273,6 +264,28 @@ class ProteinStructure:
         io.save(pdb_file)
 
 #class Complex(Structure):
+
+def get_contacts(structure, thresh, dist_threshold=None):
+
+    '''
+    Calculate contacts for which the C-alphas are within some threshold for a ProteinStructure object.
+    '''
+
+        if type(self.dmatrix)==type(None):
+            self.dmatrix = CalcDistanceMatrix(self)
+
+        if type(dist_threshold)==type(None):
+
+            return structure.residue_ids[np.where(structure.distance_matrix() < thresh)[0]], \
+                   structure.residue_ids[np.where(structure.distance_matrix() < thresh)[1]]
+
+        else:
+            s = self.dmatrix.shape[0]
+            off_diag = np.abs(np.arange(s)[None,:] - np.arange(s)[:,None]) > dist_threshold
+
+            return structure.residue_ids[np.where((structure.distance_matrix() < thresh))&(off_diag))[0]], \
+                   structure.residue_ids[np.where((structure.distance_matrix() < thresh))&(off_diag))[1]]
+
 
 
 def CalcDistanceMatrix(Structure):
