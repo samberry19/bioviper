@@ -615,7 +615,25 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
                     self.tree.prune(branch)
 
 
-    def subset_by_ids(self, ids, sort=True):
+    def subset_by_ids(self, ids, sort=False, match_order=True):
+
+        """
+        Subset the MSA using a set of IDs. Has several options related to the order they are returned:
+
+            match_order=TRUE (default): returns an MSA where sequences are ordered according to the list you passed.
+                This is the slowest option. If the IDs in the passed array are only partial, e.g. don't fully match
+                the ids in the MSA, this will still work, but it will be even slower. At the moment, it does NOT work
+                if some of the ids are not present in the alignment - if you think this is the case, I would first use
+                np.intersect1d to get only the overlapping sequence IDs.
+
+            match_order=FALSE, sort = FALSE: preserve the original order of the MSA, only excluding sequences that
+                    aren't in IDs. This is an intermediate speed. Only works for complete ids.
+
+            sort = TRUE (overrides match_order): first sort each list and then intersect. This is much faster than either
+                    of the other options for very large alignments (e.g. 100,000+ sequences), but returns sequences alphabetically
+                    rather than in any of the original orders. Only works for complete ids.
+        """
+
 
         if sort:
 
@@ -638,7 +656,14 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
             return sorted_ali[np.array(x)]
 
-        else:
+        elif match_order=True:
+            try:
+                return msa.MultipleSequenceAlignment([self.__getitem__(k) for k in ids])
+            except:
+                indices = np.array([self.get_index(k) for k in ids])
+                return self.__getitem__(indices)
+
+
             # The simple way, preserving order, but very slow for large alignments
             return self.__getitem__(np.isin(self.ids, ids))
 
