@@ -656,7 +656,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
             return sorted_ali[np.array(x)]
 
-        elif match_order=True:
+        elif match_order==True:
             try:
                 return msa.MultipleSequenceAlignment([self.__getitem__(k) for k in ids])
             except:
