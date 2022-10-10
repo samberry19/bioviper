@@ -797,7 +797,9 @@ def readSequences(filename, format="Detect"):
 
     if format=='Detect':
         ending = filename.split('.')[-1]
-        if 'fa' in ending:
+        if 'fastq' in ending:
+            format="fastq"
+        elif 'fa' in ending:
             format="fasta"
         elif 'sto' in ending:
             format = "stockholm"
@@ -806,11 +808,11 @@ def readSequences(filename, format="Detect"):
         elif "a2m" in ending:
             format = "fasta"
 
-    return SequenceArray(list(SeqIO.parse(filename, format)))
+    return SequenceArray(list(SeqIO.parse(filename, format)), fmt=format)
 
 class SequenceArray:
 
-    def __init__(self, records):
+    def __init__(self, records, fmt="fasta"):
 
         self._records = records
         self.ids = np.array([record.id for record in self._records])
@@ -818,6 +820,12 @@ class SequenceArray:
         self.descriptions = [record.id for record in self._records]
         self.N = len(self._records)
         self.L = np.array([len(rec.seq) for rec in self._records])
+        self.format = fmt
+
+        # For fastq sequencing reads with phred quality scores, save those phred quality scores in a centralized place
+        if fmt == "fastq":
+            self.phred_quality = [np.array(rec.letter_annotations["phred_quality"]) for rec in self._records]
+            self.mean_phred_quality = np.array([np.mean(qual_arr) for qual_arr in self.phred_quality])
 
     def __len__(self):
         return self.N
@@ -983,7 +991,7 @@ class SequenceArray:
             except:
                 return TypeError("Please pass a format or a filename with an ending containing fa, sto or clust")
 
-        SeqIO.write(MultipleSeqAlignment(self._records), filename, format)
+        SeqIO.write(self._records, filename, format)
 
 
 def PairwiseAlign(sequence1, sequence2, alignment_method, alignment_params):
