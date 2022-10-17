@@ -5,7 +5,7 @@ from Bio.PDB.DSSP import DSSP
 
 from copy import copy
 
-def readPDB(filename, name=None, chains='A', model=0):
+def readPDB(filename, name=None, chains='A', model=0, remove_unknown=True):
 
     '''
     Given a PDB code and a directory of where to find the structure, returns
@@ -18,6 +18,11 @@ def readPDB(filename, name=None, chains='A', model=0):
         chains: which chains of the structure to load. Defaults to "A."
             Can also pass 'all', which will load all chains.
         model: which model to use from multi-model PDBs. Defaults to 0."
+
+        remove_unknown: filter out residues with identifier "UNK" (unknown), present
+            in some pdbs, which can lead to errors downstream
+            (defaults to TRUE because I assume such "residues" are rarely useful, but
+             you can turn it off if you want to analyze the unknown residues)
 
     Outputs:
         sturcture: a ProteinStructure object
@@ -49,7 +54,7 @@ def readPDB(filename, name=None, chains='A', model=0):
         if chains.lower()=='all':    # Just extract all chains
             structure_list = []
             for ch in m:
-                structure_list.append(ProteinStructure(ch, name=name+'-'+ch.id))
+                structure_list.append(ProteinStructure(ch, name=name+'-'+ch.id, remove_unknown=remove_unknown))
             return structure_list
 
         else:    # If it's a string and not 'All', we assume it's a single chain index
@@ -59,13 +64,13 @@ def readPDB(filename, name=None, chains='A', model=0):
                 print(chains, 'is not a valid chain ID in', filename)
                 return None
 
-            return ProteinStructure(ch, name=name)
+            return ProteinStructure(ch, name=name, remove_unknown=remove_unknown)
 
     else:
         # If you pass it a list, it will extract those chains
         structure_list = []
         for ch in m:
-            structure_list.append(ProteinStructure(ch, name=name+'-'+ch.id))
+            structure_list.append(ProteinStructure(ch, name=name+'-'+ch.id, remove_unknown=remove_unknown))
         return structure_list
 
 
@@ -92,10 +97,15 @@ class ProteinStructure:
     be much easier to use that a Biopython <structure> object, which are just a complete mess.
     '''
 
-    def __init__(self, chain, annotation_type='bfactor', annotate_by='residue', resolution=None, name=None):
+    def __init__(self, chain, annotation_type='bfactor', annotate_by='residue', resolution=None, name=None,
+                remove_unknown=True):
 
         self.chain = chain
-        self.residues = [residue for residue in chain]
+
+        if remove_unknown:
+            self.residues = [residue for residue in chain if residue.resname != "UNK"]
+        else:
+            self.residues = [residue for residue in chain]
         self.residue_ids = np.array([residue.id[1] for residue in chain])
         self.sequence = ''.join([letters[residue.resname] for residue in chain if residue.resname in letters])
         self.ordered_sequence = ''.join([letters[residue.resname] for residue in chain if residue.resname in letters and not residue.is_disordered()])
