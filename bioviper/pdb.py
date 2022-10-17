@@ -106,7 +106,7 @@ class ProteinStructure:
             self.residues = [residue for residue in chain if residue.resname != "UNK"]
         else:
             self.residues = [residue for residue in chain]
-        self.residue_ids = np.array([residue.id[1] for residue in chain])
+        self.residue_ids = np.array([residue.id[1] for residue in self.residues])
         self.sequence = ''.join([letters[residue.resname] for residue in chain if residue.resname in letters])
         self.ordered_sequence = ''.join([letters[residue.resname] for residue in chain if residue.resname in letters and not residue.is_disordered()])
 
@@ -156,7 +156,7 @@ class ProteinStructure:
                 return ValueError("No such residue in protein!")
 
         elif isinstance(index, slice):
-            return ProteinStructure(residues[index], name=self.name,
+            return ProteinStructure(self.residues[index], name=self.name,
                     annotation_type=self._annotation_type, annotate_by=self._annotate_by,
                     resolution=self.resolution)
 
