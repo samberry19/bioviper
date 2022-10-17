@@ -107,8 +107,8 @@ class ProteinStructure:
         else:
             self.residues = [residue for residue in chain]
         self.residue_ids = np.array([residue.id[1] for residue in self.residues])
-        self.sequence = ''.join([letters[residue.resname] for residue in chain if residue.resname in letters])
-        self.ordered_sequence = ''.join([letters[residue.resname] for residue in chain if residue.resname in letters and not residue.is_disordered()])
+        self.sequence = ''.join([letters[residue.resname] for residue in self.residues if residue.resname in letters])
+        self.ordered_sequence = ''.join([letters[residue.resname] for residue in self.residues if residue.resname in letters and not residue.is_disordered()])
 
         self.n_residues = len(self.residues)
         self.atoms = np.concatenate([[atom for atom in residue] for residue in self.residues])
