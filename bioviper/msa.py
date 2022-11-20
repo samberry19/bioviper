@@ -592,7 +592,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
                 return self.get_index(a.id)
 
             else:
-                return array([self.get_index(seq.id) for seq in a])
+                return np.array([self.get_index(seq.id) for seq in a])
 
     def fix_tree(self):
 
