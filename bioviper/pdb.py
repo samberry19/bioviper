@@ -111,7 +111,7 @@ class ProteinStructure:
         self.ordered_sequence = ''.join([letters[residue.resname] for residue in self.residues if residue.resname in letters and not residue.is_disordered()])
 
         self.n_residues = len(self.residues)
-        self.atoms = np.concatenate([[atom for atom in residue] for residue in self.residues])
+        self.atoms = np.concatenate([[atom for atom in residue] for residue in self.residues if not residue.is_disordered()])
         self.n_atoms = len(self.atoms)
         self.xyz = np.array([atom.coord for atom in self.atoms])
         self.dmatrix = None; self.distance_method = None

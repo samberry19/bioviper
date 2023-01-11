@@ -357,7 +357,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         if len(ids) == self.N:
             self.ids = ids
-            for n,record in enumerate(self._records):
+            for n,seq in enumerate(self._records):
                 seq.id = ids[n]
         else:
             raise ValueError('ERROR: cannot use id list of length', len(ids), 'for an alignment with', self.N, 'sequences')
