@@ -408,7 +408,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         '''Get the covariance matrix across sequences'''
 
-        return np.cov(np.array(self.one_hot_encoding())))
+        return np.cov(np.array(self.one_hot_encoding()))
 
     def __getitem__(self, index):
         """Access part of the alignment. Indexes like a 2D numpy array and returns
