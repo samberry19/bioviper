@@ -221,11 +221,33 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         return df
 
-    def one_hot_encoding(self):
+    def one_hot_encoding(self, full=False, flat=True):
 
-        '''Generate a one-hot encoded pandas dataframe, e.g. for dimensionality reduction.'''
+        '''Generate a one-hot encoded pandas dataframe, e.g. for dimensionality reduction. Two arguments:
 
-        return pd.get_dummies(self.upper().as_df())
+            full: whether to use all amino acid possibilities (TRUE) or only those seen in the alignment (FALSE)
+            flat: whether to flatten the one hot encoding to 1D (final array 2D) or keep it 3D (final array 21xL)
+                (flat=False is only an option for full=True, otherwise it won't be a full matrix)
+
+            If full=False, returns a pandas dataframe
+            If full=True, returns a numpy array.'''
+
+        if full:
+
+            # Initialize an array of all zeros of the correct shape
+            x = np.zeros((self.N, self.L, 21))
+
+            for n, seq_num in enumerate(self.as_numeric()):
+                x[n, np.arange(L), seq_num] = 1
+
+                if flat:
+                    return x.reshape((self.N, self.L*21))
+                else:
+                    return x
+
+        else:
+
+            return pd.get_dummies(self.upper().as_df())
 
     def calc_pair_frequencies(self, pseudocount=0):
 
@@ -376,6 +398,17 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         self.ids = np.array(ids)
 
+    def pos_covariance(self):
+
+        '''Get the 4D position by position covariance matrix, considering one-hot encoded sequences'''
+
+        return np.cov(self.one_hot_encoding(full=True).T).reshape((sampler.alignment.L, sampler.alignment.L, 21, 21))
+
+    def seq_covariance(self):
+
+        '''Get the covariance matrix across sequences'''
+
+        return np.cov(np.array(self.one_hot_encoding())))
 
     def __getitem__(self, index):
         """Access part of the alignment. Indexes like a 2D numpy array and returns

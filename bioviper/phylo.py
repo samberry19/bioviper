@@ -39,6 +39,9 @@ class Tree:
         self.ids = self.leaf_names
         self._tempfile = tempfile
 
+        # For compatibility with biopython workflows
+        self.clade = self._biopython.clade
+
         if np.all([type(leaf.color)==type(None) for leaf in self.leaves]):
             self.is_colored = False
         else:
@@ -61,7 +64,7 @@ class Tree:
 
         self.ete3 = ete3.Tree(self._biopython.__format__("newick"))
 
-    def midpoint_root(self, root):
+    def root_at_midpoint(self):
 
         self._biopython.root_at_midpoint(root)
         self.rooted = True
@@ -588,4 +591,3 @@ def bin_trees(forest, rooted=False):
     counts = np.array([len(tree_bins[k]) for k in range(len(tree_bins))])
 
     return representative_trees, counts, tree_bins
-    
