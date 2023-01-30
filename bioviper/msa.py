@@ -226,7 +226,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         '''Generate a one-hot encoded pandas dataframe, e.g. for dimensionality reduction. Two arguments:
 
             full: whether to use all amino acid possibilities (TRUE) or only those seen in the alignment (FALSE)
-            flat: whether to flatten the one hot encoding to 1D (final array 2D) or keep it 3D (final array 21xL)
+            flat: whether to flatten the one hot encoding to 2D (shape L x 21*N) or keep it 3D (final array L x N x 21)
                 (flat=False is only an option for full=True, otherwise it won't be a full matrix)
 
             If full=False, returns a pandas dataframe
@@ -238,7 +238,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
             x = np.zeros((self.N, self.L, 21))
 
             for n, seq_num in enumerate(self.as_numeric()):
-                x[n, np.arange(L), seq_num] = 1
+                x[n, np.arange(self.L), seq_num] = 1
 
                 if flat:
                     return x.reshape((self.N, self.L*21))
