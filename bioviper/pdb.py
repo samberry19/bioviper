@@ -4,6 +4,8 @@ from Bio import PDB, pairwise2
 from Bio.PDB.DSSP import DSSP
 
 from copy import copy
+import subprocess
+import json
 
 def readPDB(filename, name=None, chains='A', model=0, remove_unknown=True):
 
@@ -79,8 +81,12 @@ def readAlphaFold(filename, name, pae_file=None):
     structure = Bio.PDB.PDBParser(QUIET=True).get_structure(name, filename)
     prot = ProteinStructure(structure[0]["A"], name=name)
 
-    if type(pae_file)!=None:
-        pae_matrix = np.genfromtxt(pae_file)
+    if type(pae_file)!=type(None):
+
+        pae_matrix = readPAE(pae_file)
+
+
+
         prot.pae = pae_matrix
 
     return prot
@@ -313,3 +319,37 @@ def CalcDistanceMatrix(Structure):
         D.append(np.sqrt(np.sum((Structure.xyz[i]-Structure.xyz)**2,axis=1)))
 
     return np.array(D)
+
+def alphafold_from_uniprot(uniprot_id, version=4, pae=True, download_dir="./"):
+    
+    '''Use wget to download a particular AlphaFold structure directly from the database based on its UniProt ID.
+    
+    Input:
+        uniprot_id: the UniProt ID of your sequence of interest, e.g. A0A812H9W4
+        version: the version of AlphaFold that you want - as of writing, the newest is 4
+        pae: whether to also download the PAE matrix file and attach is a .pae attribute'''
+    
+    alphafold_pdb = "AF-"+uniprot_id+"-F1-model_v"+str(version)+".pdb"
+    subprocess.run("wget "+"https://alphafold.ebi.ac.uk/files/"+alphafold_pdb, shell=True)
+    
+    structure = readPDB(alphafold_pdb)
+    
+    if pae:
+        pae_filename = "AF-"+uniprot_id+"-F1-predicted_aligned_error_v4.json"
+        subprocess.run("wget "+"https://alphafold.ebi.ac.uk/files/"+pae_filename, shell=True)
+        structure.pae = readPAE(pae_filename)
+    
+    return structure
+
+def readPAE(filename):
+    
+    """Read a PAE json file from the AlphaFold database"""
+    
+    try:
+        # For PAE files as a text file that can be loaded in directly
+        pae_matrix = np.genfromtxt(pae_file)
+    except:
+        # Otherwise try the JSON method
+        pae_matrix = np.array(json.load(open(filename ,"r"))[0]["predicted_aligned_error"])
+
+    return pae_matrix
