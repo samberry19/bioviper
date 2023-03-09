@@ -7,14 +7,14 @@ from copy import copy
 import subprocess
 import json
 
-def readPDB(filename, name=None, chains='A', model=0, remove_unknown=True):
+def readPDB(filename, name=None, chains='A', model=0, remove_unknown=True, fmt="detect"):
 
     '''
     Given a PDB code and a directory of where to find the structure, returns
     the distance matrix and residue ids.
 
     Inputs:
-        filename: the filepath to your .pdb file
+        filename: the filepath to your .pdb or .cif file
         name: an optional name to assign the structure, can be the PDB code
             (generated automatically from the filename if you don't pass one)
         chains: which chains of the structure to load. Defaults to "A."
@@ -27,26 +27,24 @@ def readPDB(filename, name=None, chains='A', model=0, remove_unknown=True):
              you can turn it off if you want to analyze the unknown residues)
 
     Outputs:
-        sturcture: a ProteinStructure object
+        structure: a ProteinStructure object
     '''
 
     # If you don't pass a name, automatically fill in a name from the pdb file
     #  (for some reason Biopython's PDBParser requires a "PDB code" which can really
     #    just be any name, doesn't have to be the real PDB code)
     if type(name) == type(None):
-        if '/' in filename:
-            end_path = filename.split('/')[-1]
-            if '.' in end_path:
-                name = end_path.split('.')[0]
-            else:
-                name = end_path
-        else:
-            if '.' in filename:
-                name = filename.split(".")[-2]
-            name = filename
+        name = filename.split(".")[0]
+        
+    if fmt=="detect":
+        fmt = filename.split('.')[-1]
 
-    # Load the structure using Bio.PDB
-    structure = PDB.PDBParser(QUIET=True).get_structure(name, filename)
+    if fmt.lower()=='pdb':
+        # Load the structure using Bio.PDB
+        structure = PDB.PDBParser(QUIET=True).get_structure(name, filename)
+        
+    elif fmt.lower()=="cif" or fmt.lower()=="mmcif":
+        structure = PDB.MMCIFParser(QUIET=True).get_structure(name, filename)
 
     # The number model to use in the structure; usually there is only one, and this is 0 (default)
     m = structure[model]
