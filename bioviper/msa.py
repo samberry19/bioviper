@@ -583,7 +583,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         if type(tree)==str:
             tree = readTree(tree, format)
 
-        if isinstance(tree, (Phylo.Newick.Tree, Phylo.PhyloXML.Phylogeny):
+        if isinstance(tree, (Phylo.Newick.Tree, Phylo.PhyloXML.Phylogeny)):
             tree = Tree(tree)
 
         self.tree = deepcopy(tree)
