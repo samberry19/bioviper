@@ -11,8 +11,6 @@ from matplotlib.cm import get_cmap
 
 from tqdm import tqdm
 
-#def tree_from_ete3():
-
 class Tree:
 
     def __init__(self, biopython_tree, tempfile=".temp.nwk", rooted=False):
@@ -53,6 +51,10 @@ class Tree:
 
         self.rooted = rooted
 
+    def __getitem__(self, index):
+        
+        return Tree(self._biopython.clade[index])
+    
     def __str__(self):
 
         return self.ete3.write("newick")
