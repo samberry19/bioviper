@@ -9,6 +9,7 @@ from Bio.SeqRecord import SeqRecord,_RestrictedDict
 from Bio.Align import MultipleSeqAlignment
 
 from .pdb import readPDB
+from .phylo import readTree, Tree
 
 # Otherwise we get some annoying pandas warnings
 import warnings
@@ -19,6 +20,12 @@ from copy import copy,deepcopy
 alphabet = '-ACDEFGHIKLMNPQRSTVWY'
 
 def readAlignment(alignment_file, format="fasta", calc_frequencies=False):
+
+    '''
+    Read in an alignment in a format accepted by biopython. Arguments:
+        -alignment_file: the path to the alignment you want to load
+        -format: 
+    '''
 
     msa = MultipleSequenceAlignment(AlignIO.read(alignment_file, format=format))
 
@@ -574,30 +581,39 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
             As of now, IDs in the tree must exactly match IDs in the alignment."""
 
         if type(tree)==str:
-            tree = Phylo.read(tree, format)
+            tree = readTree(tree, format)
+
+        if isinstance(tree, (Phylo.Newick.Tree, Phylo.PhyloXML.Phylogeny):
+            tree = Tree(tree)
 
         self.tree = deepcopy(tree)
 
-        for term in self.tree.get_terminals():
+        for leaf in self.tree.leaves:
+
             try:
-                n = list(self.ids).index(term.name)
+                n = list(self.ids).index(leaf.name)
+
             except:
-                ns = [n for n,i in enumerate(self.ids) if term.name in i]
+
+                ns = [n for n,i in enumerate(self.ids) if leaf.name in i]
                 if len(ns) == 0:
-                    print("Terminal name", term.name, "not in alignment - will not be attached!")
+                    print("Terminal name", leaf.name, "not in alignment - will not be attached!")
                     n = -1
+
                 elif len(ns) == 1:
                     n = n[0]
+
                 else:
-                    print("Ambiguity with terminal time", term.name, "in alignment", len(ns), "times!")
+                    print("Ambiguity with terminal time", leaf.name, "in alignment", len(ns), "times!")
                     n = -1
 
             if n > -1:
-                self._records[n].branch = term
-                term.seq = self._records[n].seq
-                term.nseq = n
+                self._records[n].branch = leaf
+                leaf.seq = self._records[n].seq
+                leaf.nseq = n
+
             elif prune_unmatched:
-                self.tree.prune(term)
+                self.tree.prune(leaf)
 
     def set_sequence_weights(self, weights):
 

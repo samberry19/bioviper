@@ -409,7 +409,7 @@ def readTree(filename, fmt="detect", **kwargs):
                 fmt = "newick"
 
             elif suff in ("xml", "phyloxml"):
-                fmt = "phyloXML"
+                fmt = "phyloxml"
 
         except:
             print("Unable to autodetect format, guessing newick...")
