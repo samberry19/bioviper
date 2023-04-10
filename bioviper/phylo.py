@@ -77,7 +77,7 @@ class Tree:
 
     def root_at_midpoint(self):
 
-        self._biopython.root_at_midpoint(root)
+        self._biopython.root_at_midpoint()
         self.rooted = True
         self._update_ete3_tree()
 
