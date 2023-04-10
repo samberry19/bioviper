@@ -55,9 +55,18 @@ class Tree:
         
         return Tree(self._biopython.clade[index])
     
+    def __iter__(self):
+        
+        self.first_level_clades = [Tree(clade) for clade in self.clade]
+        return iter(self.first_level_clades)
+    
+    def __repr__(self):
+        
+        return "bioviper.phylo.Tree with "+str(self.N)+" leaves"
+    
     def __str__(self):
 
-        return self.ete3.write("newick")
+        return self._biopython.__format__("newick")
 
     def _update_ete3_tree(self):
 
