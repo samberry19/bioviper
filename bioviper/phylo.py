@@ -19,6 +19,7 @@ class Tree:
             biopython_tree = Phylo.read(StringIO(biopython_tree), format='newick')
 
         elif isinstance(biopython_tree, Phylo.Newick.Clade):
+            self.branch_length = biopython_tree.branch_length
             biopython_tree = Phylo.Newick.Tree(biopython_tree)
 
         self._biopython = biopython_tree
