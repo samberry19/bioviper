@@ -439,6 +439,34 @@ def readTree(filename, fmt="detect", **kwargs):
 
     return Tree(Phylo.read(filename, fmt), **kwargs)
 
+def readTrees(filename, fmt="detect", **kwargs):
+
+    '''
+    Read a Tree object in from a file.
+    '''
+
+    # Autodetect format from filename, or else try newick and phyloXML
+    if fmt=="detect":
+        try:
+            suff = filename.split('.')[-1]
+
+            if suff in ("nwk", "newick"):
+                fmt = "newick"
+
+            elif suff in ("xml", "phyloxml"):
+                fmt = "phyloxml"
+
+        except:
+            print("Unable to autodetect format, guessing newick...")
+
+            try:
+                return readTrees(filename, fmt="newick")
+            except:
+                print("Trying phyloXML...")
+                return readTrees(filename, fmt="phyloXML")
+
+    return Forest([Tree(tree) for tree in Phylo.parse(filename, fmt, **kwargs)])
+
 def read_mrbayes_trprobs(filename):
 
     '''Read in an ensemble of trees (a "forest") from a MrBayes .trprobs output file.'''
