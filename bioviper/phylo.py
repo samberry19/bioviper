@@ -37,6 +37,7 @@ class Tree:
         self.N = len(self.leaf_names)
         self.ids = self.leaf_names
         self._tempfile = tempfile
+        self.depths = self._biopython.depths
 
         # For compatibility with biopython workflows
         self.clade = self._biopython.clade
@@ -104,6 +105,11 @@ class Tree:
     def get_leaf(self, name):
 
         return self.leaves[self.get_leaf_index(name)]
+
+    def find_clades(self, target=None, terminal=None, order="preorder"):
+
+        return self._biopython.find_clades(target=target, terminal=terminal,
+            order=order)
 
     def search_leaf(self, name):
 
@@ -496,6 +502,13 @@ class Forest:
                 tr.set_outgroup(root_point)
             else:
                 tr.set_outgroup(outgroup)
+
+    # def find_consensus(self, method="majority"):
+
+    #     if method=="majority":
+    #         return Consensus.strict_consensus(self.trees)
+
+        
 
     def prune(self, leaves, outgroup=False, rebin=True):
 
