@@ -52,6 +52,7 @@ class Tree:
         self.ete3 = ete3.Tree(self._biopython.__format__("newick"))
 
         self.rooted = rooted
+        self.root = None
 
     def __getitem__(self, index):
         
@@ -474,16 +475,20 @@ def read_mrbayes_trprobs(filename):
 
 class Forest:
 
-    def __init__(self, trees, probs, names, renormalize=True):
+    def __init__(self, trees, probs=None, renormalize=True):
 
         self.trees = trees
-        self.p = probs
+
+        if type(probs)==type(None):
+            self.p = np.ones(len(self.trees))
+        else:
+            self.p = probs
 
         if renormalize and np.sum(self.p) != 1:
             self.p = self.p / np.sum(self.p)
 
         #self.P = Probs
-        self.names = names
+        self.names = self.trees[0].names
         self.ids = self.names; self.term_names = self.names
         self.N = len(self.trees)
         #self.consensus_trees = None
@@ -508,7 +513,7 @@ class Forest:
     #     if method=="majority":
     #         return Consensus.strict_consensus(self.trees)
 
-        
+
 
     def prune(self, leaves, outgroup=False, rebin=True):
 
