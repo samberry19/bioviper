@@ -488,7 +488,7 @@ class Forest:
             self.p = self.p / np.sum(self.p)
 
         #self.P = Probs
-        self.names = self.trees[0].names
+        self.names = self.trees[0].ids
         self.ids = self.names; self.term_names = self.names
         self.N = len(self.trees)
         #self.consensus_trees = None
