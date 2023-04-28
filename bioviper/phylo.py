@@ -82,6 +82,7 @@ class Tree:
 
         self._biopython.root_at_midpoint()
         self.rooted = True
+        self.root = self._biopython.root
         self._update_ete3_tree()
 
     def set_outgroup(self, outgroup):
@@ -90,6 +91,7 @@ class Tree:
         self.rooted = True
         self.root = self._biopython.root
         self._update_ete3_tree()
+        self.ete3.set_outgroup(outgroup)
 
     def get_terminals(self):
         return self.leaves
