@@ -499,12 +499,12 @@ def read_mrbayes_trprobs(filename):
             ps.append(p)
             #Ps.append(P)
 
-    return Forest(trees, np.array(ps), list(ids.values()))
+    return Forest(trees, np.array(ps), names=list(ids.values()))
 
 
 class Forest:
 
-    def __init__(self, trees, probs=None, renormalize=True):
+    def __init__(self, trees, probs=None, names=None, renormalize=True):
 
         self.trees = trees
 
@@ -581,7 +581,7 @@ class Forest:
             return f
 
         else:
-            return Forest(pruned_trees, self.p, self.names)
+            return Forest(pruned_trees, p=self.p)
 
 
     def calc_marginals(self, leaves, outgroup=None):
