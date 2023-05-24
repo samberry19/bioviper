@@ -117,10 +117,11 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         self.column_annotations = column_annotations
 
         #Useful for indexing
+        self.N, self.L = self.matrix.shape
         id_to_index = pd.DataFrame(zip(self.ids, np.arange(self.N)), columns=("id", "index")).set_index("id")
         self.id_to_index = id_to_index
 
-        self.N, self.L = self.matrix.shape
+        
 
         self.coverage = None
         self.frequencies = None
