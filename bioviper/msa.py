@@ -121,8 +121,6 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         id_to_index = pd.DataFrame(zip(self.ids, np.arange(self.N)), columns=("id", "index")).set_index("id")
         self.id_to_index = id_to_index
 
-        
-
         self.coverage = None
         self.frequencies = None
         self.tree = None
@@ -700,7 +698,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         """
 
 
-        self.__getitem__[np.array(self.id_to_index.loc[ids]["index"])]
+        self.__getitem__(np.array(self.id_to_index.loc[ids]["index"]))
 
 
     def subset_by_clade(self, clade):
