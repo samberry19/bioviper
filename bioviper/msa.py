@@ -436,7 +436,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         elif isinstance(index, np.ndarray):
 
-            if isinstance(index[0], (int, np.int64, float, np.float64):
+            if isinstance(index[0], (int, np.int64, float, np.float64)):
 
                 ids = self.ids[index]; names = self.names[index]
                 descs = list(np.array(self.descriptions)[index])
