@@ -78,6 +78,53 @@ class Tree:
 
         self.ete3 = ete3.Tree(self._biopython.__format__("newick"))
 
+    def set_outgroup(self, outgroup, in_place=False, outgroup_is_ancestor=False):
+    
+        '''
+        Root the tree with an outgroup. The outgroup may be either:
+            (a) the name of a single node in the tree
+            (b) a list of nodes, in which case we'll find their common ancestor and root with that node
+
+            If doing (b), be careful that you understand what clae you're rooting with! Depending on the current
+                structure of the tree, this common ancestor could be your current root, in which case the function
+                will throw an error
+
+        Optional arguments:
+            in_place: wheter to modify the tree in place (TRUE) or return a new copy of the tree that is rooted (FALSE; default)
+            outgroup_is_ancestor: whether to manually override and inform it that the outgroup given is already a common ancestor
+                (used by the function to re-call itself recursively)
+        '''
+
+        if isinstance(root, (str, np.str_)) or outgroup_is_ancestor:
+
+            if in_place:
+                # this will change the original ete3 tree
+                self.ete3.set_outgroup(root)
+                self._biopython = Phylo.read(StringIO(self.ete3.write("newick")), "newick")
+
+            else:
+                # otherwise first copy the tree, modify the ete3 tree of that copy
+                t_copy = deepcopy(self)
+                t_copy.ete3.set_outgroup()
+
+                T = phylo.Tree(t_copy.ete3.write("newick"))
+                T.rooted = True
+                T.root = T._biopython.root
+
+                return T
+            
+        else:
+            anc = t.ete3.get_common_ancestor(root)
+
+            return self.get_outgroup(self, anc, in_place=in_place)
+
+    def root_with_outgroup(self, outgroup, in_place=False):
+
+        '''Simply calls set_outgroup(), for redundancy with biopython trees'''
+
+        return self.set_outgroup(outgroup, in_place)
+
+
     def root_at_midpoint(self):
 
         self._biopython.root_at_midpoint()
@@ -402,6 +449,7 @@ def RFdistance(Tree1, Tree2, normalized=False):
     else:
         return rf[0]
 
+
 def to_branch_color(rgb_color):
 
     '''Converts an RGB color to a Bio.Phylo BranchColor object'''
@@ -507,6 +555,17 @@ def read_mrbayes_trprobs(filename):
 class Forest:
 
     def __init__(self, trees, probs=None, names=None, renormalize=True):
+
+        '''
+        Create a Forest object. Takes:
+
+            trees: the input trees, as bioviper.phylo.Tree objects
+            probs (optional): probability values associated with each tree, as from a Bayesian tree builder's posterior distribution
+            names: a set of names for the nodes; not sure what this is doing at the moment, I might get rid of it but want to make sure it doesn't break stuff
+            renormalize: whether to renormalize probabilities to make sure that they sum to one.
+                        (this is often a problem when the software outputs them with insufficient significant figures
+                         or if you simply pass unnormalized probabilites)
+        '''
 
         self.trees = trees
 

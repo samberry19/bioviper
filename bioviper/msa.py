@@ -116,6 +116,10 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         # Handle this via the property set function which will validate it
         self.column_annotations = column_annotations
 
+        #Useful for indexing
+        id_to_index = pd.DataFrame(zip(self.ids, np.arange(self.N)), columns=("id", "index")).set_index("id")
+        self.id_to_index = id_to_index
+
         self.N, self.L = self.matrix.shape
 
         self.coverage = None
@@ -160,7 +164,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
             s = Seq(str(rec.seq).replace('-','').replace('.','').upper())
             ds.append(SeqRecord(s, id = rec.id, name=rec.name, description=rec.description))
 
-        return ds
+        return SequenceArray(ds)
 
 
     def sequence_lengths(self):
@@ -431,24 +435,34 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
             return self.__getitem__(np.arange(self.L)[index])
 
         elif isinstance(index, np.ndarray):
-            ids = self.ids[index]; names = self.names[index]
-            descs = list(np.array(self.descriptions)[index])
 
-            if type(self.tree) != type(None):
+            if isinstance(index[0], (int, np.int64, float, np.float64):
 
-                if type(index[0])==np.bool_:
-                    branches = [self._records[k] for k in np.where(index)[0]]
+                ids = self.ids[index]; names = self.names[index]
+                descs = list(np.array(self.descriptions)[index])
+
+                if type(self.tree) != type(None):
+
+                    if type(index[0])==np.bool_:
+                        branches = [self._records[k] for k in np.where(index)[0]]
+                    else:
+                        branches = [self._records[k] for k in index]
+
+                    new_msa = MultipleSequenceAlignment(self.matrix[index], ids=ids,
+                        names=names, descriptions=descs,_tree_branches=branches)
+                    new_msa.tree = self.tree
+
+                    return new_msa
+
                 else:
-                    branches = [self._records[k] for k in index]
-
-                new_msa = MultipleSequenceAlignment(self.matrix[index], ids=ids,
-                    names=names, descriptions=descs,_tree_branches=branches)
-                new_msa.tree = self.tree
-
-                return new_msa
+                    return MultipleSequenceAlignment(self.matrix[index], ids=ids, names=names, descriptions=descs)
 
             else:
-                return MultipleSequenceAlignment(self.matrix[index], ids=ids, names=names, descriptions=descs)
+
+                return self.__getitem__(np.array(self.id_to_index.loc[index]))
+
+        elif isinstance(index, list):
+            return self.__getitem__(np.array(id))
 
         elif isinstance(index, str):
             return self.__getitem__(np.where(self.ids==index)[0])[0]
@@ -628,10 +642,11 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
             indices it will return None."""
 
 
-        if id in self.ids:
-            return list(self.ids).index(id)
+        try:
+            # pandas indexing here is by far the fastest way to do this
+            return self.id_to_index.loc[id].iloc[0]
 
-        else:
+        except:
 
             a = self.search_id(id)
             if type(a)==type(None):
@@ -684,37 +699,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         """
 
 
-        if sort:
-
-            '''Sort both lists and search - orders of magnitude faster for
-                    very large alignments.'''
-
-            sorted_ali = self.__getitem__(np.argsort(self.ids))
-            ids_sorted = sorted_ali.ids
-
-            # If some ids in the id list aren't in self.ids, we'll ignore them
-            common_ids = np.intersect1d(ids, ids_sorted)
-            x = [] # Initialize a list
-            n = 0  # Iterator as we work our way through self.ids
-
-            for idx in common_ids:  # Iterate through the common ids
-                                      # each will fall in order in the sorted list
-                while (ids_sorted[n] != idx) & (n<(self.N-1)):
-                    n+=1
-                x.append(n)
-
-            return sorted_ali[np.array(x)]
-
-        elif match_order==True:
-            try:
-                return msa.MultipleSequenceAlignment([self.__getitem__(k) for k in ids])
-            except:
-                indices = np.array([self.get_index(k) for k in ids])
-                return self.__getitem__(indices)
-
-
-            # The simple way, preserving order, but very slow for large alignments
-            return self.__getitem__(np.isin(self.ids, ids))
+        self.__getitem__[np.array(self.id_to_index.loc[ids]["index"])]
 
 
     def subset_by_clade(self, clade):
