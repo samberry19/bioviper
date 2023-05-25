@@ -435,7 +435,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         elif isinstance(index, np.ndarray):
 
-            if isinstance(index[0], (int, np.int64, float, np.float64)):
+            if isinstance(index[0], (int, np.int64, float, np.float64, bool, np.bool_)):
 
                 ids = self.ids[index]; names = self.names[index]
                 descs = list(np.array(self.descriptions)[index])
@@ -458,7 +458,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
             else:
 
-                return self.__getitem__(np.array(self.id_to_index.loc[index]))
+                return self.__getitem__(np.array(self.id_to_index.loc[index]["index"]))
 
         elif isinstance(index, list):
             return self.__getitem__(np.array(id))
@@ -698,7 +698,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         """
 
 
-        self.__getitem__(np.array(self.id_to_index.loc[ids]["index"]))
+        return self.__getitem__(np.array(self.id_to_index.loc[ids]["index"]))
 
 
     def subset_by_clade(self, clade):
