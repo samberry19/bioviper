@@ -411,7 +411,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
             return self._records[index]
 
         elif isinstance(index, slice):
-            return self.__getitem__(np.arange(self.L)[index])
+            return self.__getitem__(np.arange(self.N)[index])
 
         # if you pass an array as the index
         elif isinstance(index, np.ndarray):
@@ -665,22 +665,9 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
     def subset_by_ids(self, ids, sort=False, match_order=True):
 
         """
-        Subset the MSA using a set of IDs. Has several options related to the order they are returned:
-
-            match_order=TRUE (default): returns an MSA where sequences are ordered according to the list you passed.
-                This is the slowest option. If the IDs in the passed array are only partial, e.g. don't fully match
-                the ids in the MSA, this will still work, but it will be even slower. At the moment, it does NOT work
-                if some of the ids are not present in the alignment - if you think this is the case, I would first use
-                np.intersect1d to get only the overlapping sequence IDs.
-
-            match_order=FALSE, sort = FALSE: preserve the original order of the MSA, only excluding sequences that
-                    aren't in IDs. This is an intermediate speed. Only works for complete ids.
-
-            sort = TRUE (overrides match_order): first sort each list and then intersect. This is much faster than either
-                    of the other options for very large alignments (e.g. 100,000+ sequences), but returns sequences alphabetically
-                    rather than in any of the original orders. Only works for complete ids.
+        Subset the MSA using a set of IDs. Used to be implemented in a way that turned out to be much slower, with two
+        deprecated arugments (sort & match_order); I've kept them defined by default here just for backwards compatibility
         """
-
 
         return self.__getitem__(np.array(self.id_to_index.loc[ids]["index"]))
 
