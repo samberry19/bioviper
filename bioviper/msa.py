@@ -201,6 +201,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         if type(pos_indices) != type(None):
             frequencies.index = pos_indices
+            
         elif first_pos != 0:
             frequencies.index = np.arange(first_index, self.L + first_index)
 
@@ -231,33 +232,12 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
 
         return df
 
-    def one_hot_encoding(self, full=False, flat=True):
+    def one_hot_encode(self, dim=1):
 
-        '''Generate a one-hot encoded pandas dataframe, e.g. for dimensionality reduction. Two arguments:
+        '''Generate a one-hot encoded pandas dataframe, e.g. for dimensionality reduction. If dim=1, will be N x L*20, if dim=2, will be N x L x 20'''
 
-            full: whether to use all amino acid possibilities (TRUE) or only those seen in the alignment (FALSE)
-            flat: whether to flatten the one hot encoding to 2D (shape L x 21*N) or keep it 3D (final array L x N x 21)
-                (flat=False is only an option for full=True, otherwise it won't be a full matrix)
+        return np.array([one_hot_encode(seq, dim=dim) for seq in self.as_numeric()])
 
-            If full=False, returns a pandas dataframe
-            If full=True, returns a numpy array.'''
-
-        if full:
-
-            # Initialize an array of all zeros of the correct shape
-            x = np.zeros((self.N, self.L, 21))
-
-            for n, seq_num in enumerate(self.as_numeric()):
-                x[n, np.arange(self.L), seq_num] = 1
-
-                if flat:
-                    return x.reshape((self.N, self.L*21))
-                else:
-                    return x
-
-        else:
-
-            return pd.get_dummies(self.upper().as_df())
 
     def calc_pair_frequencies(self, pseudocount=0):
 
@@ -433,13 +413,16 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         elif isinstance(index, slice):
             return self.__getitem__(np.arange(self.L)[index])
 
+        # if you pass an array as the index
         elif isinstance(index, np.ndarray):
 
+            # if the first item is an integer, float or boolean
             if isinstance(index[0], (int, np.int64, float, np.float64, bool, np.bool_)):
 
                 ids = self.ids[index]; names = self.names[index]
                 descs = list(np.array(self.descriptions)[index])
 
+                # taking the appropriate branches of the tree if you have an attached tree
                 if type(self.tree) != type(None):
 
                     if type(index[0])==np.bool_:
@@ -456,6 +439,7 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
                 else:
                     return MultipleSequenceAlignment(self.matrix[index], ids=ids, names=names, descriptions=descs)
 
+            # if they're not floats/integers/boolean 
             else:
 
                 return self.__getitem__(np.array(self.id_to_index.loc[index]["index"]))
@@ -1131,3 +1115,25 @@ def CalcIdentityMatrix(msa, gap_handling=1):
             IM.append(ids)
 
     return np.array(IM)
+
+
+def one_hot_encode(seq_num, dim=1):
+
+    '''
+    One-hot encode a numerically-encoded amino acid sequence. Faster than training a one-hot encoder
+    and using .transform()
+    '''
+
+    L = len(seq_num)
+
+    # Initialize an array of all zeros of the correct shape
+    x = np.zeros((L,21))
+
+    # Assign the appropriate positions to be ones
+    x[np.arange(L), seq_num] = 1
+
+    # Make one-dimensional if dim=1
+    if dim==1:
+        return x.reshape((L*21))
+    elif dim==2:
+        return x
