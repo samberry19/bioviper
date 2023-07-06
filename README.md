@@ -10,7 +10,13 @@ I am working on a set of Jupyter notebooks that should explain the basic usage o
 
 ## Installation
 
-bioviper is now on PyPI and can be installed with pip or conda install. However, for the last development version which may have some bugs fixed or new funcitonality being tested, I recommend using
+bioviper is now on PyPI and can be installed with pip or conda install:
+
+```
+pip install bioviper
+```
+
+However, for the last development version which may have some bugs fixed or new funcitonality being tested, I recommend using:
 
 ```
 pip install git+https://github.com/samberry19/bioviper/
