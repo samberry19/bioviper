@@ -18,6 +18,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+dependencies = ["numpy", "pandas", "matplotlib", "biopython", tqdm", "ete3"]
+
+[tool.setuptools.packages.find]
+where = ["bioviper", "bioviper.msa", "bioviper.pdb", "bioviper.sequence_logo", "bioviper.hmmer_tools"]
+
 [tool.isort]
 profile = "black"
 src_paths = "bioviper"
