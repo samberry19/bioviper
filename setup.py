@@ -10,6 +10,8 @@ setup(name='bioviper',
         'numpy',
         'pandas',
         'biopython',
-        'ete3'
+        'ete3',
+        'matplotlib',
+        'tqdm'
     ]
       )
