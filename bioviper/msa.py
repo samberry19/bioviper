@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from Bio import AlignIO, Phylo, SeqIO, PDB, pairwise2
 
-from Bio.Align import _aligners
 from Bio.Align import substitution_matrices
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord,_RestrictedDict
@@ -153,14 +152,20 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
             self.names = np.array([rec.name for rec in self._records])
             self.descriptions = [rec.description for rec in self._records]
 
-    def dealign(self):
+    def dealign(self, upper=True):
 
-        """Return raw sequences without any gap characters (or lowercase)"""
+        """Return raw sequences without any gap characters (or lowercase). One optional argument:
+            upper: return everything uppercase (DEFAULT). If FALSE, will preserve case.
+
+            As a note, if any gap characters are used other than '.' or '-', they will not be removed."""
 
         ds = []
 
         for rec in self._records:
-            s = Seq(str(rec.seq).replace('-','').replace('.','').upper())
+            if upper:
+                s = Seq(str(rec.seq).replace('-','').replace('.','').upper())
+            else:
+                s = Seq(str(rec.seq).replace('-','').replace('.',''))
             ds.append(SeqRecord(s, id = rec.id, name=rec.name, description=rec.description))
 
         return SequenceArray(ds)
@@ -542,24 +547,24 @@ class MultipleSequenceAlignment(MultipleSeqAlignment):
         for nr,record in enumerate(self._records):
             if include_gaps==True:
                 if case_sensitive:
-                    seq = record.seq
+                    seq = str(record.seq)
                 else:
                     seq = record.seq.upper()
-                    sequence=sequence.upper()
+                    sequence=str(sequence).upper()
 
                 if sequence in seq:
-                    x.append(nr, seq.index(sequence))
+                    x.append((nr, seq.index(sequence)))
 
             else:
                 if case_sensitive:
-                    seq = record.seq.replace('-','').replace('.').upper()
+                    seq = str(record.seq).replace('-','').replace('.').upper()
                 else:
-                    seq = record.seq.replace('-','').replace('.','').upper()
+                    seq = str(record.seq).replace('-','').replace('.','').upper()
                     sequence=sequence.upper()
 
                 if sequence in seq:
                     where_ungapped = np.where((self.matrix[nr]!='-')&(self.matrix[nr]!='.'))[0]
-                    x.append(nr, where_ungapped[seq.index(sequence)])
+                    x.append((nr, where_ungapped[seq.index(sequence)]))
 
         if len(x)==0:
             return None

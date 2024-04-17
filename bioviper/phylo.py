@@ -255,8 +255,8 @@ class Tree:
 
                 # If it's a dictionary, we can treat it similarly but we'll use the keys
                 elif isinstance(colors, dict):
-                    for key in dict:
-                        ColorLeaf(get_leaf(key))
+                    for key,color in colors.items():
+                        ColorLeaf(get_leaf(key), color)
 
             # Pass a pandas dataframe? Not implemented yet
             #elif isinstance(colors, pd.DataFrame):
@@ -352,7 +352,7 @@ class Tree:
             else:
                 color = to_rgb(default_color)
 
-            term.color = to_branch_color(color)
+            nonterm.color = to_branch_color(color)
 
     def copy(self):
 
@@ -406,7 +406,7 @@ class Tree:
         if fmt=='default':
 
             if self.is_colored:
-                fmt="phyloXML"
+                fmt="phyloxml"
 
             else:
                 fmt="newick"
@@ -414,7 +414,8 @@ class Tree:
         if self.is_colored and fmt=="newick":
             print("Warning: newick format does not store color information, so colors will be lost!")
 
-        Phylo.write(self._biopython, filename, fmt)
+        # as far as I can tell now all formats are lowercase in biopython (it used to want phyloXML but now it's phyloxml)
+        Phylo.write(self._biopython, filename, fmt.lower())
 
 
 def ColorLeaf(leaf, color):

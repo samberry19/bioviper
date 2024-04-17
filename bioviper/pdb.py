@@ -83,8 +83,6 @@ def readAlphaFold(filename, name, pae_file=None):
 
         pae_matrix = readPAE(pae_file)
 
-
-
         prot.pae = pae_matrix
 
     return prot
