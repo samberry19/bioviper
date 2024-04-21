@@ -986,6 +986,16 @@ class SequenceArray:
         except:
             self.structures = [(nseq, structure)]
 
+    def to_alignment(self):
+
+        '''If sequences are all the same length, convert to alignment object'''
+
+        if np.all(self.L==self.L[0]):
+            return MultipleSequenceAlignment(self._records)
+        else:
+            raise ValueError("All sequences must be the same length to convert into alignment!")
+
+
     def save(self, filename, format='Auto'):
 
         if format=='Auto':
