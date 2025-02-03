@@ -21,7 +21,7 @@ classifiers = [
 dependencies = ["numpy", "pandas", "matplotlib", "biopython", "tqdm", "ete3"]
 
 [tool.setuptools.packages.find]
-where = ["bioviper", "bioviper.msa", "bioviper.pdb", "bioviper.sequence_logo", "bioviper.hmmer_tools"]
+where = ["bioviper", "bioviper.msa", "bioviper.pdb", "bioviper.sequence_logo", "bioviper.hmmer_tools", "bioviper.utils"]
 
 [tool.isort]
 profile = "black"

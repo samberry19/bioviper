@@ -917,25 +917,34 @@ class SequenceArray:
         else:
             return x
 
-    def attach_structure(self, structure, nseq=None, name=None, chains='A', model=0):
+    def attach_structure(self, structure, nseq, name=None, chains='A', model=0, alignment_params=(2,-1,-0.75,-.1)):
+
+
+        '''
+        Attach a structure to a particular sequence in the alignment. Ideally you could search for the most similar
+        sequence, but this functionality currently doesn't work, sorry! (Hoping to fix this in the future...)
+
+
+        '''
 
         if isinstance(structure, str):
             structure = readPDB(filename, name, chains, model)
 
-        if type(nseq) == None:
+        # THIS DOESN"T WORK
+        # if type(nseq) == None:
 
-            x = self.search_sequence(structure.sequence)
+        #     x = self.search_sequence(structure.sequence)
 
-            if isinstance(x, NoneType):
-                print('Could not find sequence')
-                return None
+        #     if isinstance(x, NoneType):
+        #         print('Could not find sequence')
+        #         return None
 
-            elif isinstance(x, int):
-                nseq = x
+        #     elif isinstance(x, int):
+        #         nseq = x
 
-            elif isinstance(x, list):
-                print(len(x), 'matching sequences found! Appending to first...')
-                nseq = x[0]
+        #     elif isinstance(x, list):
+        #         print(len(x), 'matching sequences found! Appending to first...')
+        #         nseq = x[0]
 
         elif type(nseq) == str:
 
@@ -958,7 +967,7 @@ class SequenceArray:
         #  gaps (which we want to remember) with possible new gaps introduced
         #  in the alignment
         A = PairwiseAlign(str(record.seq).replace('-','x'), structure.ordered_sequence,
-                            alignment_method='globalms', alignment_params=(2,-1,-0.75,-.1))
+                            alignment_method='globalms', alignment_params=alignment_params)
 
         A1 = A[:,np.where(A.matrix[0]!='-')[0]]
         A2 = A[:,np.where(A.matrix[1]!='-')[0]]
@@ -1139,3 +1148,43 @@ def one_hot_encode(seq_num, dim=1):
         return x.reshape((L*21))
     elif dim==2:
         return x
+
+def MapAlignmentOverlap(seq1, seq2, method='globalms', params=(2,-1,-0.75,-.1), remove_gaps=False):
+
+    '''
+    Takes in two sequences and returns a set of "maps" from the original sequences to their aligned positions
+    '''
+
+    # Align the two sequences given a method and a set of parameters;
+        #  defaults to globalms (which has a larger penalty for opening gaps than for extending them)
+        #  and with a set of parameters that I have optimized aligning very similar sequences
+        #  with a couple of gaps, mutations and other oddities
+
+    if remove_gaps:
+        s1 = seq1.replace('-','')
+        s2 = seq2.replace('-','')
+
+    else:
+        s1 = seq1
+        s2 = seq2.replace('-', '.')
+
+
+    aln=PairwiseAlign(s1,s2,method,params)
+
+#     # Convert the output of that into an array
+    X=np.array([list(aln[0]), list(aln[1])])
+
+#     # Take the columns where they overlap (that is, neither sequence is gapped)
+    a=np.arange(X.shape[1])[np.all(X!='-',axis=0)]
+
+#     # Find the original positions in the first sequence that correspond to the new positions in the aligned sequences
+    x=np.zeros(X.shape[1])  # create an array the length of the full alignment sequences
+    x[X[0,:]!='-'] = np.arange(len(s1))  # map onto it the positions where the original sequence was (ungapped spots), with numbers
+    A = x[a].astype('int')  # take only the parts that are an overlap, giving the original sequence numbers for the overlapping positions
+
+#     # Find the original positions in the second sequence that correspond to the new positions in the aligned sequences (same as above)
+    y=np.empty(X.shape[1])
+    y[X[1,:]!='-'] = np.arange(len(s2))
+    B = y[a].astype('int')
+
+    return A,B
