@@ -6,6 +6,6 @@ from .pdb import readPDB, readAlphaFold, CalcDistanceMatrix
 
 from .phylo import readTree, readTrees, read_mrbayes_trprobs, RFdistance
 
-from .utils import selector
+from .utils import selector, call_variant, get_variant
 
 #from .TreeBuilders import NJTree, UPGMATree, MuscleAlign, FastTree

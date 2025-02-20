@@ -44,3 +44,34 @@ def selector(df, dic):
             X = X.loc[X[key]==val]
 
     return X
+
+def get_variant(reference, mutations, start_index=1):
+
+    '''Take in a reference sequence and a list of mutations and return the variant sequence'''
+
+    if mutations[0]=='WT':
+        return reference.copy()
+    
+    else:
+        variant = reference.copy()
+        for mut in mutations:
+            pos = int(mut[1:-1])-start_index
+            variant[pos] = mut[-1]
+        return variant
+
+def call_variant(aa_seq, wt, start_index=1):
+    
+    '''Take in a protein variant and compare it to a reference sequence'''
+    
+    # if the input is a string, convert to a numpy array
+    if isinstance(aa_seq, str):
+        aa_seq = np.array(list(aa_seq))
+    if isinstance(wt, str):
+        wt = np.array(list(wt))
+    
+    mut_pos = np.where(aa_seq!=wt)[0]
+        
+    if len(mut_pos)==0:
+        return 'WT'
+    else:
+        return ','.join([wt[i]+str(i+start_index)+aa_seq[i] for i in mut_pos])
