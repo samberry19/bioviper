@@ -3,7 +3,7 @@ import pandas as pd
 from bioviper import msa
 from Bio import Phylo
 from io import StringIO
-import ete3
+import ete4
 import os
 from copy import deepcopy
 from matplotlib.colors import to_rgba, to_rgb, ListedColormap
@@ -49,7 +49,7 @@ class Tree:
             self.colors = [leaf.color for leaf in self.leaves]
 
         #Phylo.write(self._biopython, self._tempfile, "newick")
-        self.ete3 = ete3.Tree(self._biopython.__format__("newick"))
+        self.ete4 = ete4.Tree(self._biopython.__format__("newick"))
 
         self.rooted = rooted
         self.root = None
@@ -71,12 +71,12 @@ class Tree:
 
         return self._biopython.__format__("newick")
 
-    def _update_ete3_tree(self):
+    def _update_ete4_tree(self):
 
         #Phylo.write(self._biopython, self._tempfile, "newick")
-        #self.ete3 = ete3.Tree(self._tempfile)
+        #self.ete4 = ete4.Tree(self._tempfile)
 
-        self.ete3 = ete3.Tree(self._biopython.__format__("newick"))
+        self.ete4 = ete4.Tree(self._biopython.__format__("newick"))
 
     def set_outgroup(self, outgroup, in_place=False, outgroup_is_ancestor=False):
     
@@ -99,22 +99,22 @@ class Tree:
 
             if in_place:
                 # this will change the original ete3 tree
-                self.ete3.set_outgroup(root)
-                self._biopython = Phylo.read(StringIO(self.ete3.write("newick")), "newick")
+                self.ete4.set_outgroup(root)
+                self._biopython = Phylo.read(StringIO(self.ete4.write("newick")), "newick")
 
             else:
                 # otherwise first copy the tree, modify the ete3 tree of that copy
                 t_copy = deepcopy(self)
-                t_copy.ete3.set_outgroup()
+                t_copy.ete4.set_outgroup()
 
-                T = phylo.Tree(t_copy.ete3.write("newick"))
+                T = phylo.Tree(t_copy.ete4.write("newick"))
                 T.rooted = True
                 T.root = T._biopython.root
 
                 return T
             
         else:
-            anc = t.ete3.get_common_ancestor(root)
+            anc = t.ete4.get_common_ancestor(root)
 
             return self.get_outgroup(self, anc, in_place=in_place)
 
@@ -130,15 +130,15 @@ class Tree:
         self._biopython.root_at_midpoint()
         self.rooted = True
         self.root = self._biopython.root
-        self._update_ete3_tree()
+        self._update_ete4_tree()
 
     def set_outgroup(self, outgroup):
 
         self._biopython.root_with_outgroup(outgroup)
         self.rooted = True
         self.root = self._biopython.root
-        self._update_ete3_tree()
-        self.ete3.set_outgroup(outgroup)
+        self._update_ete4_tree()
+        self.ete4.set_outgroup(outgroup)
 
     def get_terminals(self):
         return self.leaves
@@ -185,10 +185,10 @@ class Tree:
 
     def prune(self, terms):
 
-        pruned_ete3_tree = deepcopy(self.ete3)
-        pruned_ete3_tree.prune([str(i) for i in terms])
+        pruned_ete4_tree = deepcopy(self.ete4)
+        pruned_ete4_tree.prune([str(i) for i in terms])
 
-        tr = Tree(Phylo.read(StringIO(pruned_ete3_tree.write("newick")), "newick"))
+        tr = Tree(Phylo.read(StringIO(pruned_ete4_tree.write("newick")), "newick"))
 
         if self.is_colored:
 
@@ -388,18 +388,18 @@ class Tree:
 
                 self.leaf_names = self.ids
 
-            self._update_ete3_tree()
+            self._update_ete4_tree()
 
         else:
             newtree = set_ids(self.copy())
 
     def draw_ascii(self):
 
-        print(self.ete3.get_ascii())
+       print(self.ete4.get_ascii())
 
     def get_ascii(self):
 
-        return self.ete3.get_ascii()
+        return self.ete4.get_ascii()
 
     def save(self, filename, fmt='default'):
 
@@ -442,7 +442,7 @@ def RFdistance(Tree1, Tree2, normalized=False):
 
     '''Calculate the Robinson-Foulds distance between two trees'''
 
-    rf = Tree1.ete3.robinson_foulds(Tree2.ete3)
+    rf = Tree1.ete4.robinson_foulds(Tree2.ete4)
 
     if normalized:
         return rf[0] / rf[1]
@@ -649,7 +649,7 @@ class Forest:
     def calc_marginals(self, leaves, outgroup=None):
 
         """Calculate the marginal probabilities of tree topologies considering only a subset of leaves.
-           Takes ETE3 trees collected into a Forest object, presumably loaded from a MrBayes .trprobs file.
+           Takes ETE4 trees collected into a Forest object, presumably loaded from a MrBayes .trprobs file.
            Relies on trees representing a converged MCMC sample with burnout phase removed such that values
            represent true posterior marginal probabilities.
 
@@ -678,7 +678,7 @@ def rf_distances(tree_1, tree_list):
 
 def bin_trees(forest, rooted=False):
 
-    """Given a set of ETE3 trees, some of which are identical, returns the:
+    """Given a set of ETE4 trees, some of which are identical, returns the:
         -- unique trees from the set
         -- counts of each unique tree
         -- indices in the original list corresponding to each unique trees.
